@@ -317,7 +317,7 @@ export async function youtubeView(id, query) {
       el('div', { style: { flex: '1 1 420px' } },
         el('a', { href: `#/release/${id}`, class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), r.title),
         el('h1', { class: 'h-xl moon-title', style: { marginTop: '12px' } }, ytMoon, 'YouTube-kit'),
-        el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Titel, beschrijving en tags uit je titel, style-omschrijving en lyrics. Pas aan, kopieer, plak in YouTube Studio.')),
+        el('p', { class: 'muted', style: { margin: '6px 0 0', maxWidth: '62ch' } }, 'Titel, beschrijving en tags uit je titel, style-omschrijving en lyrics. Pas aan, kopieer, plak in YouTube Studio.')),
       el('div', { class: 'stack gen-col', style: { gap: '6px' } }, el('div', { class: 'row' }, seg, genBtn), settings.claude.configured ? null : el('span', { id: 'claude-why', class: 'xs muted' }, 'Claude: zet eerst een API key bij Instellingen'))),
     el('div', { class: 'cols' },
       el('div', { class: 'main-col stack', style: { gap: 'var(--space-6)' } },

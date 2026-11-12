@@ -527,7 +527,7 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .lean-plain .label { color: var(--color-text-muted); }
 .lean-plain .moon { color: var(--color-text); }
 .lean-plain .moon-none, .lean-plain .moon-concept { border-color: var(--color-text-faint); }
-.cover.big[data-depth] { rotate: y 22deg; }
+.cover.big[data-depth] { rotate: y 8deg; }
 /* a round checkbox, a moon: empty, then full */
 .check input { appearance: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--color-border-input); background: transparent; display: inline-grid; place-items: center; margin: 0; cursor: pointer; }
 .check input:checked { background: var(--color-text); border-color: var(--color-text); }
@@ -679,6 +679,23 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .form-end { flex: 1 1 100%; }
 /* the avatar marks the pages in its menu as where you are */
 .icon-btn[aria-current="page"] { border-color: var(--color-text); color: var(--color-text); }
+/* after look review round 6: what this run made smaller or further away than before, put back.
+   The phone hero card lies back without coming forward (its corners stay inside the gutter) and has
+   larger type of its own, so its words project at their old size or more. */
+@media (max-width: 640px) {
+  .hero-front .lean { translate: none; margin-left: 6px; }
+  .hero-front .lean .label { font-size: 14px; }
+  .hero-front .lean-row { font-size: 17px; }
+  /* the release cover a little smaller on a phone, so the status card's top is on the first screen */
+  .cover.big { width: min(280px, 72vw); }
+  .release-head { gap: var(--space-4); }
+  .wide-only { display: none; }
+}
+/* one inset for every panel on the release page */
+.lyrics { padding: var(--space-12) var(--space-6); }
+@media (max-width: 640px) { .lyrics { padding: var(--space-8) var(--space-6); } }
+/* Opslaan in Instellingen at the foot of the form, under its fields */
+@media (min-width: 641px) { .form-end { justify-content: flex-start; } }
 /* reduced motion, as the depth kit does it: cards lie flat, without the shadow of something that floats,
    covers and stacks rest straight; nothing is taken away. Last in the file, so it wins over the leans above. */
 @media (prefers-reduced-motion: reduce) {

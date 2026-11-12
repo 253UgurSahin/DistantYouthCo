@@ -123,7 +123,7 @@ export async function releaseView(id) {
   const head = el('section', { class: 'release-head', 'data-depth': 'scene', 'data-depth-drift': '0' },
     el('div', { 'data-depth-layer': '-1', class: 'cover-layer' }, coverEl(r, 'big', { tilt: true })),
     el('div', { class: 'copy', 'data-depth-layer': '1' },
-      el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? `Release · collectie ${r.folder_name}` : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
+      el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? [el('span', { class: 'wide-only' }, 'Release · '), `collectie ${r.folder_name}`] : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
       el('h1', { class: 'h-display rise', style: { '--i': '2' } }, r.title),
       el('div', { class: 'muted rise', style: { '--i': '3' } }, facts.join(' · ')),
       // On a phone the status card falls below the first screen: the release's moon shows here too.

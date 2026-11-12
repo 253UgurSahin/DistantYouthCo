@@ -72,7 +72,7 @@ export function standPanel(first, onFilter) {
   const chartTable = el('table', { class: 'table', hidden: true });
   const matrix = el('div', { class: 'table-wrap' });
   const error = el('div', { role: 'alert' });
-  const tableBtn = el('button', { type: 'button', class: 'btn ghost sm', 'aria-expanded': 'false', onclick: () => {
+  const tableBtn = el('button', { type: 'button', class: 'btn ghost sm', style: { paddingLeft: 0 }, 'aria-expanded': 'false', onclick: () => {
     chartTable.hidden = !chartTable.hidden;
     tableBtn.setAttribute('aria-expanded', String(!chartTable.hidden));
     tableBtn.lastChild.textContent = chartTable.hidden ? 'Toon als tabel' : 'Verberg tabel';
