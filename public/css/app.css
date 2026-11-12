@@ -179,7 +179,7 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
   width: min(330px, 100%); padding: var(--space-6); border-radius: var(--radius-lg);
   border: var(--size-border) solid color-mix(in srgb, var(--color-on-photo) 28%, transparent);
   background: color-mix(in srgb, var(--color-photo-scrim) 74%, transparent); color: var(--color-on-photo);
-  transform: perspective(700px) translateZ(48px) rotateY(-16deg) rotateX(4deg); transform-origin: 100% 50%; box-shadow: var(--shadow-lean);
+  transform: perspective(700px) rotateY(-16deg) rotateX(4deg); transform-origin: 0% 50%; box-shadow: var(--shadow-lean);
   display: flex; flex-direction: column; gap: var(--space-3);
 }
 .lean .label { color: color-mix(in srgb, var(--color-on-photo) 70%, transparent); margin-bottom: var(--space-1); }
@@ -487,7 +487,6 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
-  .lean { transform: none; }
 }
 
 /* ---------- the dashboard panel ---------- */
@@ -508,7 +507,6 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 @media (max-width: 640px) { .copy-row { flex-wrap: wrap; } .copy-row .btn { width: 100%; } .form-actions .btn { flex: 1 1 100%; } }
 .avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 1px var(--color-border), 0 0 0 4px var(--color-bg), 0 0 0 5px var(--color-border); margin-right: var(--space-3); font: 600 12px/1 var(--font-display); text-transform: uppercase; vertical-align: middle; }
 .table td.date { white-space: nowrap; letter-spacing: 0; }
-@media (prefers-reduced-motion: reduce) { .cover.big[data-depth], .stacked .cover { rotate: none; } }
 
 /* Targets of at least 24 px for every small link (WCAG 2.5.8) */
 .card > a.title { display: inline-flex; align-items: center; min-height: 24px; }
@@ -571,14 +569,14 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .lean-plain .status a { min-width: 28px; min-height: 28px; }
 
 /* ---------- run 2: finishing concept A ---------- */
-/* L002: the release head in layers; a smaller cover on phones keeps the status card on the first screen */
+/* L002: the release head in layers; on a phone the cover keeps its full size, centred */
 .release-head[data-depth="scene"] { perspective: none; }
 .cover-layer { flex: none; perspective: 1400px; }
 .release-head .copy { flex: 1 1 420px; }
 @media (max-width: 640px) {
-  .cover.big { width: min(240px, 62vw); }
+  .cover-layer { margin-inline: auto; }
   .release-head { gap: var(--space-6); }
-  .lean { transform: perspective(520px) rotateX(24deg); }
+  .lean { transform: perspective(520px) translateZ(30px) rotateX(24deg); }
 }
 /* L003: the app's own video player, the video in its own shape */
 .vplayer { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -606,14 +604,13 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .stack > a.small, .grow > a.small, .panel > a.small { align-self: flex-start; }
 .gen-col { align-items: flex-end; }
 @media (max-width: 640px) { .gen-col { align-items: flex-start; } .lean-panel { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .lean-panel { transform: none; } }
 @media (max-width: 640px) { .table th:nth-child(2), .table td:nth-child(2) { display: none; } .table td:last-child { width: 1%; } }
 @media (max-width: 640px) { .lean.lean-plain { transform: perspective(600px) rotateX(12deg); } }
 .lean-plain .status a { min-width: 32px; min-height: 32px; }
 
 /* ---------- run 2, look review round 4 ---------- */
 /* B012: the release card keeps a clear row above it */
-.release-head .lean-plain { margin-top: var(--space-2); }
+.release-head .lean-plain { margin-top: var(--space-6); }
 /* the hero on a phone: buttons and facts stay readable over the lit pier */
 .btn.on-photo:not(.primary) { background: color-mix(in srgb, var(--color-photo-scrim) 62%, transparent); }
 @media (max-width: 640px) {
@@ -628,7 +625,7 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .table .m-date .moon { vertical-align: -1px; margin-right: 2px; }
 @media (max-width: 640px) { .table thead { display: none; } }
 /* the Claude card: a shadow only while it leans */
-@media (prefers-reduced-motion: reduce), (max-width: 640px) { .lean-panel { box-shadow: none; } }
+@media (max-width: 640px) { .lean-panel { box-shadow: none; } }
 /* the required WAV zone leads */
 .slot.lead { border-style: solid; border-color: var(--color-text-muted); padding: var(--space-6) var(--space-4); }
 .slot.lead .slot-kind { width: 56px; height: 56px; }
@@ -637,3 +634,7 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 /* the dashboard spark lines share one bottom edge, also when a label wraps */
 .stat > span { margin-bottom: var(--space-3); }
 .stat .spark { margin-top: auto; }
+/* one panel treatment on the release page: the lyrics are outlined like Style and Bestanden */
+.lyrics { background: transparent; }
+/* the home card leans its near edge toward you: keep it clear of the window's edge */
+@media (min-width: 641px) { .hero-front .wrap { padding-right: 88px; } }

@@ -405,7 +405,7 @@ export async function settingsView() {
     el('h1', { class: 'h-xl' }, 'Instellingen'),
     el('form', { class: 'cols', onsubmit: (e) => save(e).catch(fail) },
       el('section', { class: 'main-col stack', style: { gap: 'var(--space-6)' }, 'aria-labelledby': 'set-yt' },
-        el('h2', { id: 'set-yt', class: 'label' }, 'Vaste onderdelen van je YouTube-beschrijving'),
+        el('h2', { id: 'set-yt', class: 'label' }, 'Vaste delen van elke beschrijving'),
         txt('artist_name', 'Artiestennaam'),
         txt('spotify_artist_url', 'Spotify-artiestenlink', 'Komt onder "More from … on Spotify".', 'url'),
         txt('youtube_channel_url', 'YouTube-kanaal', '', 'url'),
