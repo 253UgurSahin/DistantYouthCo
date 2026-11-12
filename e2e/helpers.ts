@@ -43,6 +43,9 @@ export function guard() {
 
 export async function expectAccessible(page: Page) {
   // Entrances fade in: scan once they are done, so half-faded text is not counted as low contrast.
+  // First let the view load its data: before it renders there are no animations yet, the wait below
+  // passes on an empty page, and the scan then lands mid-fade (a contrast failure about 1 run in 8).
+  await page.waitForLoadState('networkidle');
   await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity || !(a.timeline instanceof DocumentTimeline)));
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`)).toEqual([]);
