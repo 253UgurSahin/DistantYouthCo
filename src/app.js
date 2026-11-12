@@ -85,12 +85,16 @@ export function createApp() {
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
       'Cross-Origin-Opener-Policy': 'same-origin',
     });
+    // HSTS only over HTTPS: browsers ignore it on http, and a local http preview must keep working.
+    if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
   });
 
   // Static: the app itself, the fonts from their packages, nothing else.
   const pub = path.join(ROOT_DIR, 'public');
-  app.use(express.static(pub, { index: 'index.html', maxAge: '1h' }));
+  // maxAge 0 with an ETag: the browser asks again on every load and gets a 304 when nothing changed,
+  // so an update shows at once.
+  app.use(express.static(pub, { index: 'index.html', maxAge: 0, etag: true }));
   for (const name of ['inter', 'montserrat']) {
     app.use(`/fonts/${name}`, express.static(path.join(ROOT_DIR, 'node_modules', '@fontsource-variable', name), { index: false, maxAge: '30d' }));
   }
