@@ -21,10 +21,12 @@ export async function homeView(query) {
   if (latest) {
     const facts = [...styleFacts(latest.style), latest.bpm ? `${latest.bpm} BPM` : null, latest.duration ? fmtTime(latest.duration) : null].filter(Boolean);
     front.append(el('div', { class: 'wrap' },
-      el('div', { class: 'hero-copy', 'data-depth-layer': '1' },
-        el('div', { class: 'label rise', style: { '--i': '1' } }, `Laatste release${latest.folder_name ? ' · ' + latest.folder_name : ''}`),
-        el('h1', { id: 'hero-title', class: 'h-display rise', style: { '--i': '2' } }, latest.title),
-        facts.length ? el('div', { class: 'facts rise', style: { '--i': '3' } }, facts.join(' · ')) : null,
+      el('div', { class: 'hero-copy' },
+        // The words float on their own layer; the buttons stay still, so they are sharp and easy to hit.
+        el('div', { class: 'hero-words', 'data-depth-layer': '1' },
+          el('div', { class: 'label rise', style: { '--i': '1' } }, `Laatste release${latest.folder_name ? ' · ' + latest.folder_name : ''}`),
+          el('h1', { id: 'hero-title', class: 'h-display rise', style: { '--i': '2' } }, latest.title),
+          facts.length ? el('div', { class: 'facts rise', style: { '--i': '3' } }, facts.join(' · ')) : null),
         el('div', { class: 'hero-actions rise', style: { '--i': '4' } },
           latest.audio_url ? el('button', { type: 'button', class: 'btn on-photo primary lg', onclick: () => player.playList(releases, releases.indexOf(latest)) }, icon('play', 'sm'), 'Afspelen') : null,
           isAdmin() ? el('a', { class: 'btn on-photo lg', href: `#/release/${latest.id}/youtube` }, 'YouTube-kit') : null,

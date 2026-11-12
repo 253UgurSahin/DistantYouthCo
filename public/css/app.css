@@ -171,6 +171,7 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
 .hero-front { position: absolute; inset: auto 0 0 0; }
 .hero-front .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-6) var(--space-12); padding-bottom: 44px; max-width: none; }
 .hero-copy { flex: 1 1 460px; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.hero-words { display: flex; flex-direction: column; gap: var(--space-3); }
 .hero-copy .label { color: color-mix(in srgb, var(--color-on-photo) 82%, transparent); letter-spacing: .34em; }
 .hero-copy .facts { color: color-mix(in srgb, var(--color-on-photo) 86%, transparent); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
