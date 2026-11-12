@@ -105,13 +105,12 @@ export function standPanel(first, onFilter) {
     // Tiles: number, moon, words, a spark line of the period; a click shows the releases behind it.
     tiles.replaceChildren(...['live', 'ready', 'concept'].map((s) => tileButton(s, el('button', {
       type: 'button', class: 'stat', 'aria-pressed': String(active === s),
-      'aria-label': `${d.counts[s]} ${STATUS_WORDS[s].toLowerCase()}: toon deze releases`,
       onclick: () => {
         active = active === s ? 'all' : s;
         onFilter(active);
         draw();
       },
-    }, numbers[s], el('span', {}, moon(s, 'sm'), STATUS_WORDS[s]), spark(d.months.map((m) => m.by[s]))), d.counts[s])));
+    }, numbers[s], el('span', {}, moon(s, 'sm'), STATUS_WORDS[s], el('span', { class: 'sr-only' }, ': toon deze releases')), spark(d.months.map((m) => m.by[s]))), d.counts[s])));
 
     // The comparison with the period before.
     const c = d.comparison;
