@@ -50,7 +50,7 @@ Zet de app achter een reverse proxy met HTTPS (bijvoorbeeld Caddy of Nginx) en z
 
 ## Claude
 
-Zet je Anthropic API key in `.env` (`ANTHROPIC_API_KEY`) of in de app bij **Instellingen**. De app
+Zet je Anthropic API key in `.env` (`ANTHROPIC_API_KEY`) of in de app bij **Instellingen**. Een key die je in de app opslaat, wordt versleuteld bewaard met `SECRET_KEY` uit `.env`, of anders met `data/secret.key`: maak van die map dus altijd in zijn geheel een back-up. De app
 gebruikt het model `claude-opus-5-5` (te wijzigen met `CLAUDE_MODEL`). Een beschrijving of een rij
 albumnamen kost een paar cent.
 

@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DATA_DIR } from './config.js';
+import { seal, open, isSealed } from './secretbox.js';
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -95,7 +96,7 @@ export const DEFAULT_SETTINGS = {
 export function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const out = { ...DEFAULT_SETTINGS };
-  for (const r of rows) out[r.key] = r.value;
+  for (const r of rows) out[r.key] = SECRET_KEYS.has(r.key) ? open(r.value) : r.value;
   return out;
 }
 
@@ -104,8 +105,17 @@ export function saveSettings(values) {
     'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
   );
   for (const [k, v] of Object.entries(values)) {
-    if (k in DEFAULT_SETTINGS && typeof v === 'string') stmt.run(k, v);
+    if (k in DEFAULT_SETTINGS && typeof v === 'string') stmt.run(k, SECRET_KEYS.has(k) ? seal(v) : v);
   }
+}
+
+// Settings that are secrets: sealed in the database (src/secretbox.js).
+const SECRET_KEYS = new Set(['anthropic_api_key']);
+
+// A key saved before sealing existed is sealed once, at start.
+for (const k of SECRET_KEYS) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(k);
+  if (row?.value && !isSealed(row.value)) saveSettings({ [k]: row.value });
 }
 
 /** Run fn inside a transaction. */

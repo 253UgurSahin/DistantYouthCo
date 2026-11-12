@@ -197,6 +197,12 @@ test('settings never send the API key back', async () => {
   assert.equal(s.body.claude.key_saved, true);
   assert.ok(!JSON.stringify(s.body).includes('sk-ant-example-key'), 'not from the server');
   assert.equal((await admin.req('PUT', '/api/settings', { spotify_artist_url: 'javascript:alert(1)' })).status, 400);
+  // X002: what sits in the database is not the key itself.
+  const { db, getSettings } = await import('../src/db.js');
+  const raw = db.prepare("SELECT value FROM settings WHERE key = 'anthropic_api_key'").get().value;
+  assert.ok(!raw.includes('sk-ant-example-key'), 'X002: the key is not stored as plain text');
+  assert.match(raw, /^enc:v1:/);
+  assert.ok(getSettings().anthropic_api_key === 'sk-ant-example-key', 'the app reads it back');
 });
 
 test('security headers are set', async () => {
