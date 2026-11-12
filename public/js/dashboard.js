@@ -149,7 +149,11 @@ export function standPanel(first, onFilter) {
       el('tbody', {}, d.matrix.rows.map((r) => el('tr', {},
         el('th', { scope: 'row' }, el('a', { href: `#/release/${r.id}` }, moon(r.status, 'sm'), r.title)),
         cols.map((c2) => el('td', {}, el('span', { class: `cell ${r.cells[c2.key] ? 'on' : ''}` }, el('span', { class: 'sr-only' }, r.cells[c2.key] ? 'ja' : 'nee')))),
-        el('td', {}, el('span', { class: 'heat', style: { '--level': String(Math.round((r.done / cols.length) * 4) + 1) } }, `${r.done}/${cols.length}`)))))));
+        el('td', {}, el('span', { class: 'heat', style: { '--level': String(Math.round((r.done / cols.length) * 4) + 1) } }, `${r.done}/${cols.length}`)))))),
+      // On a phone the same readiness as a list: a row of dots per release, every column named.
+      el('ul', { class: 'matrix-list', 'aria-label': 'Wat elke release al heeft' }, d.matrix.rows.map((r) => el('li', {},
+        el('a', { href: `#/release/${r.id}` }, moon(r.status, 'sm'), r.title, el('span', { class: 'heat', style: { '--level': String(Math.round((r.done / cols.length) * 4) + 1) } }, `${r.done}/${cols.length}`)),
+        el('span', { class: 'dots' }, cols.map((c2) => el('span', { class: `dot-item ${r.cells[c2.key] ? 'on' : ''}` }, el('span', { class: `cell ${r.cells[c2.key] ? 'on' : ''}`, 'aria-hidden': 'true' }), c2.label, el('span', { class: 'sr-only' }, r.cells[c2.key] ? ': ja' : ': nee'))))))));
     drawUpdated();
   }
 

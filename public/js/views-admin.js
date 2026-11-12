@@ -263,7 +263,7 @@ export async function youtubeView(id, query) {
   };
   genBtn.addEventListener('click', generate);
   const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Wie schrijft' },
-    el('button', { type: 'button', 'aria-pressed': String(mode === 'claude'), disabled: !settings.claude.configured, title: settings.claude.configured ? '' : 'Voeg een Claude API key toe bij Instellingen', onclick: (e) => { mode = 'claude'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, 'Claude'),
+    el('button', { type: 'button', 'aria-pressed': String(mode === 'claude'), disabled: !settings.claude.configured, title: settings.claude.configured ? '' : 'Voeg een Claude API key toe bij Instellingen', 'aria-describedby': settings.claude.configured ? undefined : 'claude-why', onclick: (e) => { mode = 'claude'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, 'Claude'),
     el('button', { type: 'button', 'aria-pressed': String(mode === 'template'), onclick: (e) => { mode = 'template'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, 'Template'));
 
   // Steps.
@@ -291,13 +291,13 @@ export async function youtubeView(id, query) {
         el('a', { href: `#/release/${id}`, class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), r.title),
         el('h1', { class: 'h-xl', style: { marginTop: '12px' } }, 'YouTube-kit'),
         el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Titel, beschrijving en tags uit je titel, style-omschrijving en lyrics. Pas aan, kopieer, plak in YouTube Studio.')),
-      el('div', { class: 'row' }, seg, genBtn)),
+      el('div', { class: 'stack', style: { gap: '6px', alignItems: 'flex-end' } }, el('div', { class: 'row' }, seg, genBtn), settings.claude.configured ? null : el('span', { id: 'claude-why', class: 'xs muted' }, 'Claude: zet eerst een API key bij Instellingen'))),
     el('div', { class: 'cols' },
       el('div', { class: 'main-col stack', style: { gap: 'var(--space-6)' } },
         field('yt-extra', 'Extra wensen voor deze beschrijving (optioneel)', extra),
         genNote,
         el('section', { class: 'panel stack', 'aria-labelledby': 'yt-title-h' },
-          el('div', { class: 'row' }, el('h2', { id: 'yt-title-h', class: 'label', style: { flex: 1 } }, 'Titel'), el('label', { for: 'yt-type', class: 'small muted' }, 'Type'), vtype),
+          el('div', { class: 'row title-row' }, el('h2', { id: 'yt-title-h', class: 'label', style: { flex: 1 } }, 'Titel'), el('span', { class: 'row', style: { gap: '8px' } }, el('label', { for: 'yt-type', class: 'small muted' }, 'Type'), vtype)),
           el('div', { class: 'copy-row' }, titleIn, copyBtn('Titel', titleIn)), tc.c),
         el('section', { class: 'panel stack', 'aria-labelledby': 'yt-desc-h' },
           el('div', { class: 'row' }, el('h2', { id: 'yt-desc-h', class: 'label', style: { flex: 1 } }, 'Beschrijving'), copyBtn('Beschrijving', descIn, true)),
