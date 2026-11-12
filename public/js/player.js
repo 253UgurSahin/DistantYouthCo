@@ -283,6 +283,11 @@ document.addEventListener('keydown', (e) => {
   player.toggle();
 });
 
+/** Pauses the music, for a video that starts playing. */
+export function pauseAudio() {
+  audio.pause();
+}
+
 export function stopPlayer() {
   audio.pause();
   audio.removeAttribute('src');

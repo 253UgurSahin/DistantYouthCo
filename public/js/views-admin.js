@@ -160,7 +160,7 @@ export async function editView(id) {
       el('h1', { class: 'h-xl', style: { marginTop: '12px' } }, id ? 'Release bewerken' : 'Nieuwe release'),
       el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Alleen de WAV en een titel zijn verplicht. De rest kun je later aanvullen.')),
     el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(false); } },
-      el('section', { class: 'side-col', 'aria-labelledby': 'files-h' }, el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'), SLOTS.map(slot),
+      el('section', { class: 'side-col sticky-col', 'aria-labelledby': 'files-h' }, el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'), SLOTS.map(slot),
         el('p', { class: 'hint' }, 'Bestanden worden gecontroleerd op hun echte inhoud, niet alleen op de naam.')),
       el('section', { class: 'main-col stack', 'aria-labelledby': 'info-h', style: { gap: 'var(--space-6)' } },
         el('h2', { id: 'info-h', class: 'label' }, 'Info'),
@@ -181,7 +181,8 @@ export async function youtubeView(id, query) {
   const [{ release: r, limits }, settings] = await Promise.all([api(`/releases/${id}`), api('/settings')]);
   let mode = settings.claude.configured ? 'claude' : 'template';
 
-  const titleIn = el('input', { class: 'input lg', id: 'yt-title', value: r.yt_title, 'aria-labelledby': 'yt-title-h', 'aria-describedby': 'yt-title-count' });
+  // A two-line field: a full YouTube title fits on a phone too; Enter does not add a line break.
+  const titleIn = el('textarea', { class: 'textarea title-field', id: 'yt-title', rows: 2, value: r.yt_title, 'aria-labelledby': 'yt-title-h', 'aria-describedby': 'yt-title-count', onkeydown: (e) => { if (e.key === 'Enter') e.preventDefault(); } });
   const descIn = el('textarea', { class: 'textarea yt-desc', id: 'yt-desc', value: r.yt_description, 'aria-describedby': 'yt-desc-count' });
   const tagsIn = el('textarea', { class: 'textarea', id: 'yt-tags', rows: 3, value: r.yt_tags, 'aria-describedby': 'yt-tags-count' });
   const counter = (id2, input, max, extra) => {
@@ -291,7 +292,7 @@ export async function youtubeView(id, query) {
         el('a', { href: `#/release/${id}`, class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), r.title),
         el('h1', { class: 'h-xl', style: { marginTop: '12px' } }, 'YouTube-kit'),
         el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Titel, beschrijving en tags uit je titel, style-omschrijving en lyrics. Pas aan, kopieer, plak in YouTube Studio.')),
-      el('div', { class: 'stack', style: { gap: '6px', alignItems: 'flex-end' } }, el('div', { class: 'row' }, seg, genBtn), settings.claude.configured ? null : el('span', { id: 'claude-why', class: 'xs muted' }, 'Claude: zet eerst een API key bij Instellingen'))),
+      el('div', { class: 'stack gen-col', style: { gap: '6px' } }, el('div', { class: 'row' }, seg, genBtn), settings.claude.configured ? null : el('span', { id: 'claude-why', class: 'xs muted' }, 'Claude: zet eerst een API key bij Instellingen'))),
     el('div', { class: 'cols' },
       el('div', { class: 'main-col stack', style: { gap: 'var(--space-6)' } },
         field('yt-extra', 'Extra wensen voor deze beschrijving (optioneel)', extra),
@@ -365,8 +366,8 @@ export async function accountsView() {
       el('thead', {}, el('tr', {}, el('th', {}, 'Naam'), el('th', {}, 'Rol'), el('th', {}, 'Sinds'), el('th', {}, el('span', { class: 'sr-only' }, 'Acties')))),
       el('tbody', {}, users.map((u) => el('tr', {},
         el('td', {}, el('span', { class: 'avatar', 'aria-hidden': 'true' }, u.username.slice(0, 1)), u.username, u.id === session.user.id ? el('span', { class: 'faint' }, ' (jij)') : null,
-          el('span', { class: 'm-date' }, `sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
-        el('td', {}, u.role === 'admin' ? 'Admin' : 'Luisteraar'),
+          el('span', { class: 'm-date' }, `${u.role === 'admin' ? 'Admin' : 'Luisteraar'} · sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
+        el('td', {}, el('span', { class: 'status' }, moon(u.role === 'admin' ? 'live' : 'none', 'sm'), u.role === 'admin' ? 'Admin' : 'Luisteraar')),
         el('td', { class: 'muted date' }, new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')),
         el('td', { style: { textAlign: 'right' } },
           el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `Nieuw wachtwoord voor ${u.username}`, onclick: () => reset(u).catch(fail) }, icon('key-round', 'sm')),
@@ -413,9 +414,9 @@ export async function settingsView() {
         txt('default_video_type', 'Standaard video-type', 'Bijvoorbeeld Official Visualizer.'),
         el('div', { class: 'form-actions' }, el('button', { type: 'submit', class: 'btn primary lg' }, 'Opslaan'))),
       el('aside', { class: 'side-col' },
-        el('section', { class: 'panel stack', 'aria-labelledby': 'set-claude' },
+        el('section', { class: 'panel stack lean-panel', 'aria-labelledby': 'set-claude' },
           el('h2', { id: 'set-claude', class: 'label' }, 'Claude'),
-          el('p', { class: 'status' }, moon(claude.configured ? 'live' : 'none'), claude.configured ? (claude.from_env ? 'Ingesteld via de server (ANTHROPIC_API_KEY)' : 'Ingesteld') : 'Nog niet ingesteld: de YouTube-kit gebruikt dan het template'),
+          el('p', { class: 'status claude-moon' }, moon(claude.configured ? 'live' : 'none', 'xl'), claude.configured ? (claude.from_env ? 'Ingesteld via de server (ANTHROPIC_API_KEY)' : 'Ingesteld') : 'Nog niet ingesteld: de YouTube-kit gebruikt dan het template'),
           field('s-key', 'Anthropic API key', key, 'Wordt op de server bewaard en nooit meer getoond. Maak er een op console.anthropic.com.'),
           claude.key_saved ? el('button', { type: 'button', class: 'btn danger sm', style: { alignSelf: 'flex-start' }, onclick: () => clearKey().catch(fail) }, 'Key weghalen') : null))));
 }

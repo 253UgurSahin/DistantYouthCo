@@ -569,3 +569,44 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 @media (max-width: 860px) { .track.has-tools .badges { display: none; } }
 @media (max-width: 640px) { .table .m-date { display: block; } }
 .lean-plain .status a { min-width: 28px; min-height: 28px; }
+
+/* ---------- run 2: finishing concept A ---------- */
+/* L002: the release head in layers; a smaller cover on phones keeps the status card on the first screen */
+.release-head[data-depth="scene"] { perspective: none; }
+.cover-layer { flex: none; perspective: 1400px; }
+.release-head .copy { flex: 1 1 420px; }
+@media (max-width: 640px) {
+  .cover.big { width: min(240px, 62vw); }
+  .release-head { gap: var(--space-6); }
+  .lean { transform: perspective(520px) rotateX(24deg); }
+}
+/* L003: the app's own video player, the video in its own shape */
+.vplayer { display: flex; flex-direction: column; gap: var(--space-2); }
+.vplayer .video-box { position: relative; display: flex; justify-content: center; }
+.vplayer video { width: 100%; height: auto; max-height: 70vh; aspect-ratio: auto; cursor: pointer; display: block; }
+.vplay { position: absolute; top: 50%; left: 50%; translate: -50% -50%; width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid var(--color-on-photo); background: color-mix(in srgb, var(--color-photo-scrim) 55%, transparent); color: var(--color-on-photo); display: flex; align-items: center; justify-content: center; transition: opacity var(--duration-base), transform var(--duration-fast) var(--ease-standard); }
+.vplay:hover { transform: scale(1.06); }
+.vplayer.playing .vplay { opacity: 0; pointer-events: none; }
+.vbar { display: flex; align-items: center; gap: var(--space-2); }
+.vbar .range { flex: 1; }
+:fullscreen.vplayer { background: var(--color-photo-scrim); padding: var(--space-6); justify-content: center; }
+:fullscreen.vplayer video { max-height: calc(100vh - 96px); }
+/* L004: a few releases fill the row with larger covers */
+.grid.few { grid-template-columns: repeat(var(--n), minmax(0, 260px)); justify-content: start; gap: var(--space-8) var(--space-12); }
+@media (max-width: 640px) { .grid.few { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6) var(--space-4); } }
+/* L001: the admin screens in the concept */
+@media (min-width: 1024px) { .sticky-col { position: sticky; top: var(--space-6); align-self: flex-start; } }
+.slot-kind { border-radius: 50%; }
+.slot.filled .slot-kind { box-shadow: 0 0 0 4px var(--color-surface), 0 0 0 5px var(--color-text-muted); }
+.lean-panel { transform: perspective(1200px) rotateY(-8deg); transform-origin: 100% 50%; box-shadow: var(--shadow-card); }
+.moon.xl { width: 28px; height: 28px; }
+.moon.xl.moon-ready { box-shadow: inset -9px 2px 0 0 currentColor; }
+.claude-moon { gap: var(--space-4); align-items: center; }
+.title-field { resize: none; font-size: var(--text-base); line-height: 1.45; }
+.stack > a.small, .grow > a.small, .panel > a.small { align-self: flex-start; }
+.gen-col { align-items: flex-end; }
+@media (max-width: 640px) { .gen-col { align-items: flex-start; } .lean-panel { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lean-panel { transform: none; } }
+@media (max-width: 640px) { .table th:nth-child(2), .table td:nth-child(2) { display: none; } .table td:last-child { width: 1%; } }
+@media (max-width: 640px) { .lean.lean-plain { transform: perspective(600px) rotateX(12deg); } }
+.lean-plain .status a { min-width: 32px; min-height: 32px; }

@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { player } from './player.js';
 import { isAdmin } from './session.js';
 import { standPanel } from './dashboard.js';
+import { videoPlayer } from './video.js';
 import { coverEl, sectionHead, emptyState, releaseCard, collectionCard, playlistCard, trackRow, addToPlaylist, namesPanel } from './parts.js';
 
 
@@ -63,6 +64,8 @@ export async function homeView(query) {
     const shown = releases.filter((r) => (filter === 'all' || r.status === filter) &&
       (!t || [r.title, r.style, r.lyrics].some((s) => (s || '').toLowerCase().includes(t))));
     grid.replaceChildren(...(shown.length ? shown.map((r, i) => releaseCard(r, shown, i)) : [emptyState('Niets gevonden met dit filter.')]));
+    grid.classList.toggle('few', shown.length > 0 && shown.length <= 4);
+    grid.style.setProperty('--n', String(Math.max(1, shown.length)));
     count.textContent = `${shown.length} van ${releases.length}`;
     for (const b of chipsEl.children) b.setAttribute('aria-pressed', String(b.dataset.f === filter));
     stand?.setActive(filter);
@@ -114,9 +117,11 @@ export async function releaseView(id) {
   const hook = hookLine(r.lyrics);
   const sections = parseLyrics(r.lyrics);
 
-  const head = el('section', { class: 'release-head' },
-    coverEl(r, 'big', { tilt: true }),
-    el('div', { class: 'copy' },
+  // The head is a depth scene: the cover lies behind, the words in front, the status card nearest.
+  // No drift, so the buttons rest; the layers move with the pointer and as the page scrolls.
+  const head = el('section', { class: 'release-head', 'data-depth': 'scene', 'data-depth-drift': '0' },
+    el('div', { 'data-depth-layer': '-1', class: 'cover-layer' }, coverEl(r, 'big', { tilt: true })),
+    el('div', { class: 'copy', 'data-depth-layer': '1' },
       el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? `Release · collectie ${r.folder_name}` : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
       el('h1', { class: 'h-display rise', style: { '--i': '2' } }, r.title),
       el('div', { class: 'muted rise', style: { '--i': '3' } }, facts.join(' · ')),
@@ -127,7 +132,7 @@ export async function releaseView(id) {
         el('span', { class: 'spacer' }),
         admin ? el('a', { class: 'btn lg', href: `#/release/${r.id}/youtube` }, 'YouTube-kit') : null,
         admin ? el('a', { class: 'btn subtle lg', href: `#/release/${r.id}/bewerken` }, icon('pencil', 'sm'), 'Bewerken') : null),
-      el('div', { class: 'lean lean-plain status-rows', role: 'group', 'aria-label': 'Onderweg naar live' },
+      el('div', { class: 'lean lean-plain status-rows rise', style: { '--i': '5' }, 'data-depth-layer': '2', role: 'group', 'aria-label': 'Onderweg naar live' },
         el('span', { class: 'label' }, 'Onderweg naar live'),
         el('span', { class: 'status' }, moon(r.on_spotify ? 'live' : 'none'), `Spotify — ${r.on_spotify ? 'live' : 'nog niet'}`,
           r.spotify_url ? el('a', { href: r.spotify_url, target: '_blank', rel: 'noopener', 'aria-label': 'Open op Spotify' }, icon('external-link', 'xs')) : null),
@@ -146,7 +151,7 @@ export async function releaseView(id) {
   if (r.video_url) {
     side.append(el('section', { class: 'stack', style: { gap: '12px' }, 'aria-labelledby': 'vid-h' },
       el('h2', { id: 'vid-h', class: 'label' }, r.video_type || 'Video'),
-      el('div', { class: 'video-box' }, el('video', { src: r.video_url, controls: true, preload: 'none', playsinline: true, poster: r.cover_url || undefined }))));
+      videoPlayer(r)));
   }
   if (r.style) side.append(el('section', { class: 'panel quiet stack', style: { gap: '8px' } }, el('h2', { class: 'label' }, 'Style'), el('p', { class: 'small', style: { margin: 0 } }, r.style)));
   if (admin) {
