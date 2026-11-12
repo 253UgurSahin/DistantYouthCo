@@ -97,7 +97,7 @@ export function requireAjaxHeader(req, res, next) {
   next();
 }
 
-// Very small in-memory brute-force guard for the login endpoint.
+// Very small in-memory brute-force guard for the login endpoint: only failed attempts count.
 const attempts = new Map();
 export function loginRateLimit(req, res, next) {
   const key = req.ip;
@@ -107,9 +107,11 @@ export function loginRateLimit(req, res, next) {
     entry.count = 0;
     entry.reset = now + 15 * 60_000;
   }
-  entry.count += 1;
   attempts.set(key, entry);
-  if (entry.count > 20) return res.status(429).json({ error: 'Te veel pogingen, probeer het later opnieuw.' });
+  if (entry.count >= 20) return res.status(429).json({ error: 'Te veel pogingen, probeer het later opnieuw.' });
+  res.on('finish', () => {
+    if (res.statusCode >= 400) entry.count += 1;
+  });
   next();
 }
 

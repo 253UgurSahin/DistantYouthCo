@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 // A database and upload folder of its own: never the one the app uses.
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dyc-test-'));
@@ -10,6 +11,10 @@ process.env.DATA_DIR = dataDir;
 process.env.DYC_NO_FFMPEG = '1';
 delete process.env.ANTHROPIC_API_KEY;
 const { createApp } = await import('../src/app.js');
+
+// Fresh passwords every run: nothing secret-looking lives in the code.
+const pw = () => crypto.randomBytes(12).toString('base64url');
+const PW = { admin: pw(), listener: pw(), other: pw() };
 
 let server;
 let base;
@@ -63,8 +68,8 @@ test('first visit asks for the admin; setup works once', async () => {
   const s = await admin.req('GET', '/api/session');
   assert.equal(s.body.needsSetup, true);
   assert.equal((await admin.req('POST', '/api/setup', { username: 'ad', password: 'x' })).status, 400, 'weak input is refused');
-  assert.equal((await admin.req('POST', '/api/setup', { username: 'admin', password: 'geheim1234' })).status, 201);
-  assert.equal((await new Client().req('POST', '/api/setup', { username: 'evil', password: 'geheim1234' })).status, 403, 'no second setup');
+  assert.equal((await admin.req('POST', '/api/setup', { username: 'admin', password: PW.admin })).status, 201);
+  assert.equal((await new Client().req('POST', '/api/setup', { username: 'evil', password: PW.admin })).status, 403, 'no second setup');
 });
 
 test('state-changing calls need the app header (CSRF guard)', async () => {
@@ -113,11 +118,19 @@ test('the YouTube-kit falls back to the template without a Claude key', async ()
 });
 
 test('admin makes a listener and a second listener', async () => {
-  assert.equal((await admin.req('POST', '/api/users', { username: 'luisteraar', password: 'luister1234', role: 'listener' })).status, 201);
-  assert.equal((await admin.req('POST', '/api/users', { username: 'ander', password: 'ander12345', role: 'listener' })).status, 201);
-  assert.equal((await listener.req('POST', '/api/login', { username: 'luisteraar', password: 'fout' })).status, 401);
-  assert.equal((await listener.req('POST', '/api/login', { username: 'luisteraar', password: 'luister1234' })).status, 200);
-  assert.equal((await other.req('POST', '/api/login', { username: 'ander', password: 'ander12345' })).status, 200);
+  assert.equal((await admin.req('POST', '/api/users', { username: 'luisteraar', password: PW.listener, role: 'listener' })).status, 201);
+  assert.equal((await admin.req('POST', '/api/users', { username: 'ander', password: PW.other, role: 'listener' })).status, 201);
+  assert.equal((await listener.req('POST', '/api/login', { username: 'luisteraar', password: PW.listener + 'x' })).status, 401);
+  assert.equal((await listener.req('POST', '/api/login', { username: 'luisteraar', password: PW.listener })).status, 200);
+  assert.equal((await other.req('POST', '/api/login', { username: 'ander', password: PW.other })).status, 200);
+});
+
+test('N001: correct logins are never blocked by the login limit', async () => {
+  const c = new Client();
+  for (let i = 0; i < 25; i++) {
+    const r = await c.req('POST', '/api/login', { username: 'luisteraar', password: PW.listener });
+    assert.equal(r.status, 200, `login ${i + 1}`);
+  }
 });
 
 test('a listener cannot upload, manage or see hidden releases', async () => {
@@ -175,4 +188,11 @@ test('security headers are set', async () => {
 test('deleting a release removes its files', async () => {
   assert.equal((await admin.req('DELETE', `/api/releases/${hiddenId}`)).status, 200);
   assert.equal(fs.existsSync(path.join(dataDir, 'uploads', 'releases', String(hiddenId))), false);
+});
+
+test('N001: twenty wrong passwords block the login for a while', async () => {
+  const c = new Client();
+  let last;
+  for (let i = 0; i < 25; i++) last = await c.req('POST', '/api/login', { username: 'luisteraar', password: PW.listener + i });
+  assert.equal(last.status, 429);
 });
