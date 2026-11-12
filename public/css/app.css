@@ -169,7 +169,7 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
 }
 .hero-photo { background: url(/img/banner.jpg) center 60% / cover; filter: grayscale(1) brightness(.62); }
 .hero-front { position: absolute; inset: auto 0 0 0; }
-.hero-front .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-6) var(--space-12); padding-bottom: 44px; max-width: none; }
+.hero-front .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-6) var(--space-12); padding-bottom: 44px; }
 .hero-copy { flex: 1 1 460px; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .hero-words { display: flex; flex-direction: column; gap: var(--space-3); }
 .hero-copy .label { color: color-mix(in srgb, var(--color-on-photo) 82%, transparent); letter-spacing: .34em; }
@@ -628,7 +628,6 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 @media (max-width: 640px) { .lean-panel { box-shadow: none; } }
 /* the required WAV zone leads */
 .slot.lead { border-style: solid; border-color: var(--color-text-muted); padding: var(--space-6) var(--space-4); }
-.slot.lead .slot-kind { width: 56px; height: 56px; }
 /* selects get a Lucide chevron */
 .select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b9098' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-position: calc(100% - 14px) 50%; background-size: 18px 18px; }
 /* the dashboard spark lines share one bottom edge, also when a label wraps */
@@ -636,13 +635,54 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .stat .spark { margin-top: auto; }
 /* one panel treatment on the release page: the lyrics are outlined like Style and Bestanden */
 .lyrics { background: transparent; }
-/* the home card leans its near edge toward you: keep it clear of the window's edge */
-@media (min-width: 641px) { .hero-front .wrap { padding-right: 88px; } }
+/* placeholders in the faint text colour, which reads at 4.5:1 or more on a field in both themes */
+::placeholder { color: var(--color-text-faint); opacity: 1; }
+/* round 6: the hero text stands on the content column, the same left edge as the sections below.
+   The home card is a tilt card of the depth kit: it turns toward the pointer on top of its rest lean.
+   depth.js owns its transform, so the rest lean lives in rotate and translate, under the perspective
+   of the stage around it: the same pose as before, pivoting on the far edge. */
+.lean-stage { perspective: 700px; perspective-origin: 0% 50%; }
+.hero-front .lean { transform: none; rotate: 0.243 -0.97 0 16.5deg; transform-origin: 0% 50%; }
+@media (max-width: 640px) {
+  .lean-stage { perspective: 520px; perspective-origin: 50% 100%; }
+  .hero-front .lean { rotate: x 24deg; translate: 0 0 30px; transform-origin: 50% 100%; }
+}
+/* round 6: on a phone the release's moon shows under its title, on the first screen */
+.phone-status { display: none; }
+@media (max-width: 640px) { .phone-status { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); } }
+/* round 6: the visualizer sits in a 16:9 frame as on YouTube (a square video gets dark bars), and its
+   controls lie over the foot of the picture in the photo colours, as a player's do, so the first
+   screen at 1440 keeps them in view. The colour tokens are set again inside the bar. */
+.vplayer { position: relative; }
+.vplayer video { aspect-ratio: 16 / 9; object-fit: contain; max-height: none; }
+:fullscreen.vplayer video { aspect-ratio: auto; max-height: calc(100vh - 96px); }
+.vbar {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-8) var(--space-3) var(--space-2);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: linear-gradient(to top, color-mix(in srgb, var(--color-photo-scrim) 88%, transparent), transparent);
+  --color-text: var(--color-on-photo); --color-text-muted: color-mix(in srgb, var(--color-on-photo) 84%, transparent);
+  --color-border: color-mix(in srgb, var(--color-on-photo) 38%, transparent);
+  --color-accent: var(--color-on-photo); --color-on-accent: var(--color-photo-scrim); color: var(--color-text);
+}
+/* round 6: the admin screens. A moon by the title: the release's way onto YouTube in the YouTube-kit,
+   the files so far in the release form (new, crescent, gibbous, full). */
+.moon-title { display: flex; align-items: center; gap: var(--space-3); }
+.title-moon { display: inline-flex; }
+.moon-gibbous { background: currentColor; box-shadow: inset 4px 0 0 0 var(--color-bg); }
+.moon.xl.moon-gibbous { box-shadow: inset 8px 0 0 0 var(--color-bg); }
+/* the upload steps wax to full: done is a full moon, the next step a crescent, the rest new moons */
+.step-nr.next { color: var(--color-text); box-shadow: inset -5px 0 0 0 var(--color-text), inset 0 0 0 1.5px var(--color-text-muted); }
+/* Claude without a key: plainly not available, with a key in it; the reason stands under it */
+.seg button[disabled] { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-faint); outline: 1px dashed var(--color-border-input); outline-offset: -3px; }
+/* the release form's fields two by two; Opslaan in Instellingen after both columns */
+.form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-end { flex: 1 1 100%; }
+/* the avatar marks the pages in its menu as where you are */
+.icon-btn[aria-current="page"] { border-color: var(--color-text); color: var(--color-text); }
 /* reduced motion, as the depth kit does it: cards lie flat, without the shadow of something that floats,
    covers and stacks rest straight; nothing is taken away. Last in the file, so it wins over the leans above. */
 @media (prefers-reduced-motion: reduce) {
   .lean, .lean.lean-plain, .lean-panel { transform: none; box-shadow: none; }
   .cover.big[data-depth], .stacked .cover { rotate: none; }
+  .hero-front .lean { rotate: none; translate: none; }
 }
-/* placeholders in the faint text colour, which reads at 4.5:1 or more on a field in both themes */
-::placeholder { color: var(--color-text-faint); opacity: 1; }

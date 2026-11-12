@@ -32,8 +32,9 @@ export async function homeView(query) {
           latest.audio_url ? el('button', { type: 'button', class: 'btn on-photo primary lg', onclick: () => player.playList(releases, releases.indexOf(latest)) }, icon('play', 'sm'), 'Afspelen') : null,
           isAdmin() ? el('a', { class: 'btn on-photo lg', href: `#/release/${latest.id}/youtube` }, 'YouTube-kit') : null,
           el('a', { class: 'btn on-photo lg', href: `#/release/${latest.id}` }, latest.lyrics ? 'Lyrics' : 'Bekijken'))),
-      el('div', { 'data-depth-layer': '2', class: 'rise', style: { '--i': '3' } },
-        el('div', { class: 'lean' },
+      // The status card turns toward the pointer (a tilt card) on top of its rest lean (app.css, .lean-stage).
+      el('div', { 'data-depth-layer': '2', class: 'rise lean-stage', style: { '--i': '3' } },
+        el('div', { class: 'lean', 'data-depth': 'tilt', 'data-depth-tone': 'dark' },
           el('div', { class: 'label' }, 'Onderweg naar live'),
           el('div', { class: 'lean-row' }, moon(latest.on_spotify ? 'live' : 'none', 'lg'), `Spotify — ${latest.on_spotify ? 'live' : 'nog niet'}`),
           el('div', { class: 'lean-row' }, moon(latest.youtube_state, 'lg'), `YouTube — ${YT_WORDS[latest.youtube_state]}`),
@@ -125,12 +126,14 @@ export async function releaseView(id) {
       el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? `Release · collectie ${r.folder_name}` : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
       el('h1', { class: 'h-display rise', style: { '--i': '2' } }, r.title),
       el('div', { class: 'muted rise', style: { '--i': '3' } }, facts.join(' · ')),
+      // On a phone the status card falls below the first screen: the release's moon shows here too.
+      el('div', { class: 'phone-status rise', style: { '--i': '3' }, 'aria-hidden': 'true' }, moon(r.status), STATUS_WORDS[r.status]),
       el('div', { class: 'row rise', style: { '--i': '4' } },
         r.audio_url ? el('button', { type: 'button', class: 'btn primary lg', onclick: () => player.play(r) }, icon('play', 'sm'), 'Afspelen') : null,
         r.video_url ? el('button', { type: 'button', class: 'btn subtle lg', onclick: () => player.openVideo(r) }, icon('video', 'sm'), 'Video') : null,
         el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Aan playlist toevoegen', onclick: () => addToPlaylist(r).catch((e) => toast(e.message, 'error')) }, icon('plus', 'sm')),
         el('span', { class: 'spacer' }),
-        admin ? el('a', { class: 'btn lg', href: `#/release/${r.id}/youtube` }, 'YouTube-kit') : null,
+        admin ? el('a', { class: 'btn subtle lg', href: `#/release/${r.id}/youtube` }, 'YouTube-kit') : null,
         admin ? el('a', { class: 'btn subtle lg', href: `#/release/${r.id}/bewerken` }, icon('pencil', 'sm'), 'Bewerken') : null),
       el('div', { class: 'lean lean-plain status-rows rise', style: { '--i': '5' }, role: 'group', 'aria-label': 'Onderweg naar live' },
         el('span', { class: 'label' }, 'Onderweg naar live'),
@@ -153,7 +156,6 @@ export async function releaseView(id) {
       el('h2', { id: 'vid-h', class: 'label' }, r.video_type || 'Video'),
       videoPlayer(r)));
   }
-  if (r.style) side.append(el('section', { class: 'panel quiet stack', style: { gap: '8px' } }, el('h2', { class: 'label' }, 'Style'), el('p', { class: 'small', style: { margin: 0 } }, r.style)));
   if (admin) {
     side.append(el('section', { class: 'panel quiet', 'aria-labelledby': 'files-h' },
       el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'),
@@ -165,7 +167,8 @@ export async function releaseView(id) {
     if (r.notes) side.append(el('section', { class: 'panel quiet stack', style: { gap: '8px' } }, el('h2', { class: 'label' }, 'Notities'), el('p', { class: 'small', style: { margin: 0, whiteSpace: 'pre-line' } }, r.notes)));
   }
 
-  return el('div', { class: 'wrap page' }, head, el('div', { class: 'cols' }, el('div', { class: 'main-col' }, lyrics), side));
+  const style = r.style ? el('section', { class: 'panel quiet stack', style: { gap: '8px' } }, el('h2', { class: 'label' }, 'Style'), el('p', { class: 'small', style: { margin: 0 } }, r.style)) : null;
+  return el('div', { class: 'wrap page' }, head, el('div', { class: 'cols' }, el('div', { class: 'main-col stack' }, lyrics, style), side));
 }
 
 // ---------- S05 Collections and playlists ----------

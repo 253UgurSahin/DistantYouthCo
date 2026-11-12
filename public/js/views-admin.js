@@ -30,6 +30,12 @@ export async function editView(id) {
   const slotEls = {};
   const bars = [];
 
+  // The title's moon waxes as files are added: new, crescent, gibbous, full.
+  const titleMoon = el('span', { class: 'title-moon' });
+  const drawMoon = () => {
+    const n = SLOTS.filter((s) => files[s.kind] || (r.has?.[s.kind] && !removed[s.kind])).length;
+    titleMoon.replaceChildren(moon(n === 0 ? 'none' : n >= SLOTS.length ? 'live' : n === 1 ? 'ready' : 'gibbous', 'xl'));
+  };
   const slot = (s) => {
     const input = el('input', { type: 'file', accept: s.accept, class: 'sr-only', id: `file-${s.kind}`, 'aria-describedby': `file-${s.kind}-text` });
     const text = el('div', { class: 'xs muted', id: `file-${s.kind}-text` });
@@ -45,6 +51,7 @@ export async function editView(id) {
       bar, input);
     const paint = () => {
       node.classList.toggle('filled', Boolean(has()));
+      drawMoon();
       node.classList.remove('invalid');
       const f = files[s.kind];
       text.textContent = f ? `${f.name} · ${(f.size / 1048576).toFixed(1)} MB` : has() ? (s.kind === 'mp3' && r.mp3_generated ? 'Automatisch gemaakt uit de WAV' : s.kind === 'cover' && r.cover_generated ? 'Frame uit je video' : 'Opgeslagen') : s.empty;
@@ -157,7 +164,7 @@ export async function editView(id) {
   return el('div', { class: 'wrap page' },
     el('div', {},
       el('a', { href: id ? `#/release/${id}` : '#/', class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), id ? r.title : 'Releases'),
-      el('h1', { class: 'h-xl', style: { marginTop: '12px' } }, id ? 'Release bewerken' : 'Nieuwe release'),
+      el('h1', { class: 'h-xl moon-title', style: { marginTop: '12px' } }, titleMoon, id ? 'Release bewerken' : 'Nieuwe release'),
       el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Alleen de WAV en een titel zijn verplicht. De rest kun je later aanvullen.')),
     el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(false); } },
       el('section', { class: 'side-col sticky-col', 'aria-labelledby': 'files-h' }, el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'), SLOTS.map(slot),
@@ -185,6 +192,15 @@ export async function youtubeView(id, query) {
   const titleIn = el('textarea', { class: 'textarea title-field', id: 'yt-title', rows: 2, value: r.yt_title, 'aria-labelledby': 'yt-title-h', 'aria-describedby': 'yt-title-count', onkeydown: (e) => { if (e.key === 'Enter') e.preventDefault(); } });
   const descIn = el('textarea', { class: 'textarea yt-desc', id: 'yt-desc', value: r.yt_description, 'aria-describedby': 'yt-desc-count' });
   const tagsIn = el('textarea', { class: 'textarea', id: 'yt-tags', rows: 3, value: r.yt_tags, 'aria-describedby': 'yt-tags-count' });
+  // The description and the tags grow with their text, so no line is cut off.
+  // A view is put on the page a frame or two after it is built (a page transition): wait for that.
+  const fit = (t, tries = 60) => {
+    if (!t.isConnected) { if (tries) requestAnimationFrame(() => fit(t, tries - 1)); return; }
+    t.style.height = 'auto';
+    t.style.height = `${t.scrollHeight + 2}px`;
+  };
+  for (const t of [descIn, tagsIn]) t.addEventListener('input', () => fit(t));
+  requestAnimationFrame(() => { fit(descIn); fit(tagsIn); });
   const counter = (id2, input, max, extra) => {
     const c = el('div', { class: 'counter', id: id2, 'aria-live': 'polite' });
     const upd = () => {
@@ -236,7 +252,7 @@ export async function youtubeView(id, query) {
   } }, icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer');
 
   const extra = el('input', { class: 'input', id: 'yt-extra', maxlength: 1000, placeholder: 'bv. deel 2 van de reeks' });
-  const genBtn = el('button', { type: 'button', class: 'btn lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
+  const genBtn = el('button', { type: 'button', class: 'btn subtle lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
   const genNote = el('div', { class: 'small muted', 'aria-live': 'polite' }, r.yt_generated_with ? `Laatst gemaakt met ${r.yt_generated_with === 'template' ? 'het template' : 'Claude'}` : '');
   const generate = async () => {
     if (r.yt_description && dirty && !(await confirmDialog('Opnieuw genereren?', 'Je aanpassingen in de tekst worden overschreven.', 'Overschrijven'))) return;
@@ -248,12 +264,12 @@ export async function youtubeView(id, query) {
       titleIn.value = res.release.yt_title;
       descIn.value = res.release.yt_description;
       tagsIn.value = res.release.yt_tags;
-      tc.upd(); dc.upd(); gc.upd(); drawChips();
+      tc.upd(); dc.upd(); gc.upd(); drawChips(); fit(descIn); fit(tagsIn);
       dirty = false;
       genNote.textContent = `Gemaakt met ${res.generated_with === 'template' ? 'het template' : 'Claude'}. Lees het na en pas aan waar je wilt.`;
       genBtn.lastChild.textContent = 'Opnieuw genereren';
-      step2.classList.add('done');
-      step2.replaceChildren(icon('check', 'xs'));
+      r.yt_description = res.release.yt_description;
+      drawSteps();
     } catch (e) {
       genNote.textContent = '';
       fail(e);
@@ -264,18 +280,28 @@ export async function youtubeView(id, query) {
   };
   genBtn.addEventListener('click', generate);
   const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Wie schrijft' },
-    el('button', { type: 'button', 'aria-pressed': String(mode === 'claude'), disabled: !settings.claude.configured, title: settings.claude.configured ? '' : 'Voeg een Claude API key toe bij Instellingen', 'aria-describedby': settings.claude.configured ? undefined : 'claude-why', onclick: (e) => { mode = 'claude'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, 'Claude'),
+    el('button', { type: 'button', 'aria-pressed': String(mode === 'claude'), disabled: !settings.claude.configured, title: settings.claude.configured ? '' : 'Voeg een Claude API key toe bij Instellingen', 'aria-describedby': settings.claude.configured ? undefined : 'claude-why', onclick: (e) => { mode = 'claude'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, settings.claude.configured ? null : icon('key-round', 'xs'), 'Claude'),
     el('button', { type: 'button', 'aria-pressed': String(mode === 'template'), onclick: (e) => { mode = 'template'; for (const b of seg.children) b.setAttribute('aria-pressed', String(b === e.currentTarget)); } }, 'Template'));
 
   // Steps.
   const ytUrl = el('input', { class: 'input', id: 'yt-url', type: 'url', placeholder: 'https://youtu.be/…', value: r.youtube_url });
-  const step1 = el('span', { class: `step-nr ${r.has.video ? 'done' : ''}` }, r.has.video ? icon('check', 'xs') : '1');
-  const step2 = el('span', { class: `step-nr ${r.yt_description ? 'done' : ''}` }, r.yt_description ? icon('check', 'xs') : '2');
-  const step4 = el('span', { class: `step-nr ${r.on_youtube ? 'done' : ''}` }, r.on_youtube ? icon('check', 'xs') : '4');
+  // The four steps are moons that wax to full as the release gets onto YouTube; the next one is a crescent.
+  const [step1, step2, step3, step4] = [1, 2, 3, 4].map(() => el('span', { class: 'step-nr' }));
+  const ytMoon = el('span', { class: 'title-moon' });
+  const drawSteps = () => {
+    const done = [r.has.video, Boolean(r.yt_description), Boolean(r.on_youtube), Boolean(r.on_youtube)];
+    const next = done.indexOf(false);
+    [step1, step2, step3, step4].forEach((node, i) => {
+      node.className = `step-nr${done[i] ? ' done' : i === next ? ' next' : ''}`;
+      node.replaceChildren(String(i + 1), done[i] ? el('span', { class: 'sr-only' }, ' (klaar)') : '');
+    });
+    ytMoon.replaceChildren(moon(r.on_youtube ? 'live' : r.youtube_state, 'xl'));
+  };
+  drawSteps();
   const markLive = async () => {
     const res = await api(`/releases/${id}/status`, { method: 'POST', body: { youtube_url: ytUrl.value, on_youtube: true } });
-    step4.replaceChildren(icon('check', 'xs'));
-    step4.classList.add('done');
+    r.on_youtube = 1;
+    drawSteps();
     toast(`Op YouTube gezet: ${res.release.title}`);
   };
   const sources = [
@@ -290,7 +316,7 @@ export async function youtubeView(id, query) {
     el('div', { class: 'row', style: { alignItems: 'flex-end' } },
       el('div', { style: { flex: '1 1 420px' } },
         el('a', { href: `#/release/${id}`, class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), r.title),
-        el('h1', { class: 'h-xl', style: { marginTop: '12px' } }, 'YouTube-kit'),
+        el('h1', { class: 'h-xl moon-title', style: { marginTop: '12px' } }, ytMoon, 'YouTube-kit'),
         el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Titel, beschrijving en tags uit je titel, style-omschrijving en lyrics. Pas aan, kopieer, plak in YouTube Studio.')),
       el('div', { class: 'stack gen-col', style: { gap: '6px' } }, el('div', { class: 'row' }, seg, genBtn), settings.claude.configured ? null : el('span', { id: 'claude-why', class: 'xs muted' }, 'Claude: zet eerst een API key bij Instellingen'))),
     el('div', { class: 'cols' },
@@ -308,17 +334,17 @@ export async function youtubeView(id, query) {
           chips, el('label', { for: 'yt-tags', class: 'sr-only' }, 'Tags, met komma\'s'), tagsIn, gc.c),
         el('div', { class: 'row', style: { justifyContent: 'flex-end' } }, el('button', { type: 'button', class: 'btn subtle lg', onclick: () => saveTexts().catch(fail) }, 'Tekst opslaan'))),
       el('aside', { class: 'side-col' },
-        el('section', { class: 'panel', 'aria-labelledby': 'steps-h' },
+        el('section', { class: 'panel lean-panel', 'aria-labelledby': 'steps-h' },
           el('h2', { id: 'steps-h', class: 'label' }, 'Uploaden naar YouTube'),
           el('ol', { class: 'steps' },
             el('li', {}, step1, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Download de video'),
               r.has.video ? el('a', { class: 'btn subtle sm', href: `/media/${id}/video?download=1`, style: { alignSelf: 'flex-start' } }, icon('download', 'sm'), 'MP4 downloaden')
                 : el('a', { class: 'small', href: `#/release/${id}/bewerken` }, 'Nog geen video — upload er een'))),
             el('li', {}, step2, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Maak en controleer de tekst'), el('span', { class: 'xs muted' }, 'Links: genereren, nalezen, kopiëren.'))),
-            el('li', {}, el('span', { class: 'step-nr' }, '3'), el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Plak alles in YouTube Studio'),
+            el('li', {}, step3, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Plak alles in YouTube Studio'),
               el('a', { class: 'small', href: 'https://studio.youtube.com', target: '_blank', rel: 'noopener' }, 'studio.youtube.com ', icon('external-link', 'xs')))),
             el('li', {}, step4, el('div', { class: 'grow' }, el('label', { for: 'yt-url', class: 'small', style: { fontWeight: 700 } }, 'Plak de link van je video'), ytUrl,
-              el('button', { type: 'button', class: 'btn', onclick: () => markLive().catch(fail) }, 'Markeer als op YouTube'))))),
+              el('button', { type: 'button', class: 'btn subtle', onclick: () => markLive().catch(fail) }, 'Markeer als op YouTube'))))),
         el('section', { class: 'panel', 'aria-labelledby': 'src-h' },
           el('h2', { id: 'src-h', class: 'label' }, 'Gebruikt als bron'),
           el('div', { class: 'stack', style: { gap: '10px' } },
@@ -361,13 +387,13 @@ export async function accountsView() {
   return el('div', { class: 'wrap page' },
     el('div', { class: 'row' }, el('h1', { class: 'h-xl' }, 'Accounts'), el('span', { class: 'spacer' }),
       el('button', { type: 'button', class: 'btn primary', onclick: () => add().catch(fail) }, icon('plus', 'sm'), 'Nieuw account')),
-    el('p', { class: 'muted', style: { margin: 0 } }, 'Luisteraars kunnen je releases afspelen (behalve concepten) en hun eigen playlists maken. Alleen admins uploaden en beheren.'),
+    el('p', { class: 'muted', style: { margin: 0, maxWidth: '65ch' } }, 'Luisteraars kunnen je releases afspelen (behalve concepten) en hun eigen playlists maken. Alleen admins uploaden en beheren.'),
     el('div', { class: 'table-wrap' }, el('table', { class: 'table' },
       el('thead', {}, el('tr', {}, el('th', {}, 'Naam'), el('th', {}, 'Rol'), el('th', {}, 'Sinds'), el('th', {}, el('span', { class: 'sr-only' }, 'Acties')))),
       el('tbody', {}, users.map((u) => el('tr', {},
         el('td', {}, el('span', { class: 'avatar', 'aria-hidden': 'true' }, u.username.slice(0, 1)), u.username, u.id === session.user.id ? el('span', { class: 'faint' }, ' (jij)') : null,
-          el('span', { class: 'm-date' }, moon(u.role === 'admin' ? 'live' : 'none', 'sm'), ` ${u.role === 'admin' ? 'Admin' : 'Luisteraar'} · sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
-        el('td', {}, el('span', { class: 'status' }, moon(u.role === 'admin' ? 'live' : 'none', 'sm'), u.role === 'admin' ? 'Admin' : 'Luisteraar')),
+          el('span', { class: 'm-date' }, `${u.role === 'admin' ? 'Admin' : 'Luisteraar'} · sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
+        el('td', {}, u.role === 'admin' ? 'Admin' : 'Luisteraar'),
         el('td', { class: 'muted date' }, new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')),
         el('td', { style: { textAlign: 'right' } },
           el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `Nieuw wachtwoord voor ${u.username}`, onclick: () => reset(u).catch(fail) }, icon('key-round', 'sm')),
@@ -384,6 +410,10 @@ export async function settingsView() {
     inputs[key] = type === 'textarea'
       ? el('textarea', { class: 'textarea', id: `s-${key}`, rows: 2, value: s[key] })
       : el('input', { class: 'input', id: `s-${key}`, type, value: s[key] });
+    return field(`s-${key}`, label, inputs[key], hint);
+  };
+  const pick = (key, label, hint, options) => {
+    inputs[key] = el('select', { class: 'select', id: `s-${key}` }, [...new Set([...options, s[key]])].map((t) => el('option', { value: t, selected: t === s[key] }, t)));
     return field(`s-${key}`, label, inputs[key], hint);
   };
   const key = el('input', { class: 'input', id: 's-key', type: 'password', autocomplete: 'off', placeholder: claude.key_saved ? '•••••••• (opgeslagen)' : 'sk-ant-…' });
@@ -410,15 +440,16 @@ export async function settingsView() {
         txt('spotify_artist_url', 'Spotify-artiestenlink', 'Komt onder "More from … on Spotify".', 'url'),
         txt('youtube_channel_url', 'YouTube-kanaal', '', 'url'),
         txt('ai_disclosure', 'AI-vermelding', 'Precies zoals hij in de beschrijving moet staan.', 'textarea'),
-        txt('default_hashtags', 'Standaard-hashtags', 'Komen achter de hashtags van het nummer. Met spaties ertussen.'),
-        txt('default_video_type', 'Standaard video-type', 'Bijvoorbeeld Official Visualizer.'),
-        el('div', { class: 'form-actions' }, el('button', { type: 'submit', class: 'btn primary lg' }, 'Opslaan'))),
+        txt('default_hashtags', 'Standaard-hashtags', 'Komen achter de hashtags van het nummer. Met spaties ertussen.', 'textarea'),
+        pick('default_video_type', 'Standaard video-type', 'Het type dat een nieuwe release krijgt.', VIDEO_TYPES)),
       el('aside', { class: 'side-col' },
         el('section', { class: 'panel stack lean-panel', 'aria-labelledby': 'set-claude' },
           el('h2', { id: 'set-claude', class: 'label' }, 'Claude'),
           el('p', { class: 'status claude-moon' }, moon(claude.configured ? 'live' : 'none', 'xl'), claude.configured ? (claude.from_env ? 'Ingesteld via de server (ANTHROPIC_API_KEY)' : 'Ingesteld') : 'Nog niet ingesteld: de YouTube-kit gebruikt dan het template'),
           field('s-key', 'Anthropic API key', key, 'Wordt op de server bewaard en nooit meer getoond. Maak er een op console.anthropic.com.'),
-          claude.key_saved ? el('button', { type: 'button', class: 'btn danger sm', style: { alignSelf: 'flex-start' }, onclick: () => clearKey().catch(fail) }, 'Key weghalen') : null))));
+          claude.key_saved ? el('button', { type: 'button', class: 'btn danger sm', style: { alignSelf: 'flex-start' }, onclick: () => clearKey().catch(fail) }, 'Key weghalen') : null)),
+      // One Opslaan for both columns, after the Claude key too (on a phone it used to come before it).
+      el('div', { class: 'form-actions form-end' }, el('button', { type: 'submit', class: 'btn primary lg' }, 'Opslaan'))));
 }
 
 // ---------- Account (password, theme) ----------

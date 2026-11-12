@@ -25,9 +25,9 @@ const ROUTES = [
   [/^\/collectie\/(\d+)$/, (m) => collectionView(m[1]), 'collecties'],
   [/^\/playlists$/, () => playlistsView(), 'playlists'],
   [/^\/playlist\/(\d+)$/, (m) => playlistView(m[1]), 'playlists'],
-  [/^\/accounts$/, () => accountsView(), ''],
-  [/^\/instellingen$/, () => settingsView(), ''],
-  [/^\/account$/, () => accountView(), ''],
+  [/^\/accounts$/, () => accountsView(), 'account'],
+  [/^\/instellingen$/, () => settingsView(), 'account'],
+  [/^\/account$/, () => accountView(), 'account'],
 ];
 
 function parseHash() {
@@ -48,7 +48,8 @@ function header(active) {
     isAdmin() ? el('a', { href: '#/instellingen' }, icon('settings', 'sm'), 'Instellingen') : null,
     el('hr'),
     el('button', { type: 'button', onclick: logout }, icon('log-out', 'sm'), 'Uitloggen'));
-  const menuBtn = el('button', { type: 'button', class: 'icon-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'account-menu', 'aria-label': `Account: ${session.user.username}` },
+  // On Accounts, Instellingen and Account the avatar shows where you are: those pages live in its menu.
+  const menuBtn = el('button', { type: 'button', class: 'icon-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'account-menu', 'aria-label': `Account: ${session.user.username}`, ...(active === 'account' ? { 'aria-current': 'page' } : {}) },
     el('span', { class: 'caps', style: { fontWeight: '600', fontSize: '13px' } }, session.user.username.slice(0, 1)));
   const setOpen = (open) => {
     menuPanel.hidden = !open;

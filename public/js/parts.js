@@ -98,7 +98,7 @@ export async function addToPlaylist(release) {
 export function namesPanel(kind, id, onUse) {
   const out = el('div', { class: 'names' });
   const dir = el('input', { class: 'input', id: `dir-${kind}`, placeholder: 'bv. kort, één woord, iets met nacht', maxlength: 300 });
-  const btn = el('button', { type: 'button', class: 'btn lg' }, 'Stel namen voor');
+  const btn = el('button', { type: 'button', class: 'btn subtle lg' }, 'Stel namen voor');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
