@@ -37,7 +37,7 @@ export async function editView(id) {
     bars.push(bar);
     const has = () => files[s.kind] || (r.has?.[s.kind] && !removed[s.kind]);
     const actions = el('div', { class: 'row' });
-    const node = el('div', { class: 'slot' },
+    const node = el('div', { class: `slot ${s.kind === 'wav' ? 'lead' : ''}` },
       el('div', { class: 'slot-main' },
         el('span', { class: 'slot-kind', 'aria-hidden': 'true' }, s.tile || icon('image')),
         el('div', { class: 'slot-text' }, el('b', {}, s.title, ' ', el('span', { class: s.need === 'verplicht' ? '' : 'faint', style: { fontWeight: 500 } }, `· ${s.need}`)), text),
@@ -235,7 +235,7 @@ export async function youtubeView(id, query) {
     }
   } }, icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer');
 
-  const extra = el('input', { class: 'input', id: 'yt-extra', maxlength: 1000, placeholder: 'bv. noem dat dit deel 2 is van de Japanese-Inspired reeks' });
+  const extra = el('input', { class: 'input', id: 'yt-extra', maxlength: 1000, placeholder: 'bv. deel 2 van de reeks' });
   const genBtn = el('button', { type: 'button', class: 'btn lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
   const genNote = el('div', { class: 'small muted', 'aria-live': 'polite' }, r.yt_generated_with ? `Laatst gemaakt met ${r.yt_generated_with === 'template' ? 'het template' : 'Claude'}` : '');
   const generate = async () => {
@@ -366,12 +366,12 @@ export async function accountsView() {
       el('thead', {}, el('tr', {}, el('th', {}, 'Naam'), el('th', {}, 'Rol'), el('th', {}, 'Sinds'), el('th', {}, el('span', { class: 'sr-only' }, 'Acties')))),
       el('tbody', {}, users.map((u) => el('tr', {},
         el('td', {}, el('span', { class: 'avatar', 'aria-hidden': 'true' }, u.username.slice(0, 1)), u.username, u.id === session.user.id ? el('span', { class: 'faint' }, ' (jij)') : null,
-          el('span', { class: 'm-date' }, `${u.role === 'admin' ? 'Admin' : 'Luisteraar'} · sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
+          el('span', { class: 'm-date' }, moon(u.role === 'admin' ? 'live' : 'none', 'sm'), ` ${u.role === 'admin' ? 'Admin' : 'Luisteraar'} · sinds ${new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')}`)),
         el('td', {}, el('span', { class: 'status' }, moon(u.role === 'admin' ? 'live' : 'none', 'sm'), u.role === 'admin' ? 'Admin' : 'Luisteraar')),
         el('td', { class: 'muted date' }, new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')),
         el('td', { style: { textAlign: 'right' } },
           el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `Nieuw wachtwoord voor ${u.username}`, onclick: () => reset(u).catch(fail) }, icon('key-round', 'sm')),
-          u.id !== session.user.id ? el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `${u.username} verwijderen`, onclick: () => remove(u).catch(fail) }, icon('trash-2', 'sm')) : null)))))));
+          u.id !== session.user.id ? el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `${u.username} verwijderen`, onclick: () => remove(u).catch(fail) }, icon('trash-2', 'sm')) : el('span', { class: 'icon-slot', 'aria-hidden': 'true' }))))))));
 }
 
 // ---------- S09 Settings ----------
