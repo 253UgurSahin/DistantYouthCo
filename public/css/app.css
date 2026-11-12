@@ -57,7 +57,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 @media (max-width: 640px) { :root { --layout-gutter: 16px; } .page { padding-top: var(--space-8); gap: var(--space-8); } }
 
 /* ---------- header ---------- */
-.header { border-bottom: var(--size-border) solid var(--color-border); }
+.header { border-bottom: var(--size-border) solid var(--color-border); position: relative; z-index: 25; }
 .header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-8); min-height: var(--layout-header); max-width: none; }
 .brand { display: flex; align-items: center; gap: var(--space-3); text-decoration: none; }
 .brand img { width: 42px; height: 42px; }
