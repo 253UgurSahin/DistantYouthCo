@@ -644,3 +644,5 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
   .lean, .lean.lean-plain, .lean-panel { transform: none; box-shadow: none; }
   .cover.big[data-depth], .stacked .cover { rotate: none; }
 }
+/* placeholders in the faint text colour, which reads at 4.5:1 or more on a field in both themes */
+::placeholder { color: var(--color-text-faint); opacity: 1; }
