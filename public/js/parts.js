@@ -59,7 +59,7 @@ export function trackRow(r, list, i, tools) {
       ? el('button', { type: 'button', class: 'cover-btn', style: { background: 'none', border: '0', padding: '0' }, 'aria-label': `Speel ${r.title}`, onclick: () => player.playList(list, i) }, coverEl(r, 'xs', { gray: true }))
       : coverEl(r, 'xs', { gray: true }),
     el('a', { class: 't', href: `#/release/${r.id}` }, el('span', { class: 'title' }, r.title), el('span', { class: 'small muted' }, r.style ? r.style.split(',')[0] : ''),
-      el('span', { class: 'mini' }, moon(r.youtube_state, 'sm'), `YouTube ${YT[r.youtube_state]}`, moon(r.on_spotify ? 'live' : 'none', 'sm'), `Spotify ${r.on_spotify ? 'live' : 'niet uit'}`, r.duration ? el('span', { class: 'mdur' }, ` · ${fmtTime(r.duration)}`) : null)),
+      el('span', { class: 'mini' }, el('span', { class: 'pair' }, moon(r.youtube_state, 'sm'), `YouTube ${YT[r.youtube_state]}`), el('span', { class: 'pair' }, moon(r.on_spotify ? 'live' : 'none', 'sm'), `Spotify ${r.on_spotify ? 'live' : 'niet uit'}`), r.duration ? el('span', { class: 'mdur' }, ` · ${fmtTime(r.duration)}`) : null)),
     el('span', { class: 'badges', 'aria-label': 'Bestanden' },
       el('span', {}, 'WAV'), el('span', { class: r.has.mp3 ? '' : 'off' }, 'MP3'), el('span', { class: r.has.video ? '' : 'off' }, 'MP4')),
     el('span', { class: 'st' },

@@ -364,7 +364,7 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
 .track .nr { font: 600 13px/1 var(--font-display); color: var(--color-text-faint); }
 .track.playing .nr { color: var(--color-text); }
 .track a.t { display: flex; flex-direction: column; gap: 3px; text-decoration: none; min-width: 0; }
-.track a.t .title { overflow-wrap: break-word; hyphens: auto; }
+.track a.t .title { overflow-wrap: normal; word-break: normal; hyphens: manual; }
 .track .mini { display: none; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--color-text-muted); }
 .badges { display: inline-flex; gap: 6px; }
 .badges span { padding: 3px 7px; border-radius: var(--radius-pill); border: var(--size-border) solid var(--color-text-faint); font: 700 10px/1 var(--font-display); letter-spacing: .08em; }
@@ -557,6 +557,15 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
   .title-row { flex-wrap: wrap; }
   .select { padding-right: var(--space-8); }
   .table td.date, .table th:nth-child(3) { display: none; }
+  .table .m-date { display: block; }
   .table td { white-space: nowrap; }
   .lean-plain { transform: perspective(600px) rotateX(12deg); transform-origin: 50% 100%; }
 }
+
+/* phone rows: each status stays one unit with its moon; the account date as a second line */
+.track .mini { flex-wrap: wrap; row-gap: var(--space-1); }
+.track .mini .pair { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.table .m-date { display: none; font-size: var(--text-xs); color: var(--color-text-muted); margin-left: 44px; }
+@media (max-width: 860px) { .track.has-tools .badges { display: none; } }
+@media (max-width: 640px) { .table .m-date { display: block; } }
+.lean-plain .status a { min-width: 28px; min-height: 28px; }
