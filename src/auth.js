@@ -45,7 +45,8 @@ export function createSession(res, userId) {
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: COOKIE_SECURE,
+    // Secure when asked for, and always when the request came in over HTTPS (behind a trusted proxy too).
+    secure: COOKIE_SECURE || res.req.secure,
     maxAge: SESSION_DAYS * 86400_000,
     path: '/',
   });
