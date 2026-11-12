@@ -50,3 +50,16 @@ test.describe('on a phone', () => {
     await expect(full).toHaveCount(0);
   });
 });
+
+test('F04-H5 the video plays in the app\'s own player, and the music pauses for it', async ({ page }) => {
+  await page.goto(`/#/release/${SEED.lanterns}`);
+  await page.getByRole('button', { name: 'Afspelen' }).first().click();
+  const bar = page.getByRole('region', { name: 'Speler' });
+  await expect(bar.getByRole('button', { name: 'Pauzeren' })).toBeVisible();
+  await page.getByRole('button', { name: 'Video afspelen' }).click();
+  await expect(page.getByRole('button', { name: 'Video pauzeren' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Afspelen' })).toBeVisible(); // the music waits
+  await expect(page.getByRole('slider', { name: 'Positie in de video' })).toBeVisible();
+  await page.getByRole('button', { name: 'Video pauzeren' }).click();
+  await expect(page.getByRole('button', { name: 'Video afspelen' })).toBeVisible();
+});
