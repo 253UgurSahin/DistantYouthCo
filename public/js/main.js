@@ -26,7 +26,8 @@ const ROUTES = [
   [/^\/playlists$/, () => playlistsView(), 'playlists'],
   [/^\/playlist\/(\d+)$/, (m) => playlistView(m[1]), 'playlists'],
   [/^\/accounts$/, () => accountsView(), ''],
-  [/^\/instellingen$/, () => settingsView(), ''],
+    // The query carries "youtube=klaar" when Google sends the browser back after connecting the channel.
+    [/^\/instellingen$/, (m, q) => settingsView(q), ''],
   [/^\/account$/, () => accountView(), ''],
 ];
 

@@ -82,6 +82,30 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `);
 
+// ---------- migrations ----------
+
+/**
+ * Release columns added after the first version. CREATE TABLE IF NOT EXISTS does not add columns to a
+ * database that already exists, so each one is added here when it is missing. Safe to run on every start.
+ */
+const ADDED_RELEASE_COLUMNS = {
+    // The id of the video the app uploaded itself (empty when the release was put on YouTube by hand).
+    youtube_video_id: "TEXT NOT NULL DEFAULT ''",
+    // What YouTube last said about that video: private, unlisted or public.
+    yt_privacy: "TEXT NOT NULL DEFAULT ''",
+    // ISO time a scheduled video goes public; empty when it is not scheduled.
+    yt_publish_at: "TEXT NOT NULL DEFAULT ''",
+    // When the app finished uploading it (SQLite datetime, UTC).
+    yt_uploaded_at: "TEXT NOT NULL DEFAULT ''",
+};
+{
+    const have = new Set(db.prepare('PRAGMA table_info(releases)').all().map((c) => c.name));
+    for (const [name, type] of Object.entries(ADDED_RELEASE_COLUMNS)) {
+        // The names and types are our own constants above, never user input, so building the SQL is safe.
+        if (!have.has(name)) db.exec(`ALTER TABLE releases ADD COLUMN ${name} ${type}`);
+    }
+}
+
 export const DEFAULT_SETTINGS = {
   artist_name: 'Distant Youth Co.',
   spotify_artist_url: 'https://open.spotify.com/artist/7hbil2HXkg0OniGTxMUHeo',
@@ -90,7 +114,32 @@ export const DEFAULT_SETTINGS = {
   default_hashtags: '#aimusic #sunoai #bassmusic #electronicmusic #distantyouthco',
   default_video_type: 'Official Visualizer',
   anthropic_api_key: '',
+    // ---- Direct upload to YouTube (Google OAuth, see src/youtube-api.js) ----
+    // The OAuth client of the artist's own Google Cloud project. The ID is not secret; the secret
+    // and the refresh token are, and the settings API never sends those two back to the browser.
+    youtube_client_id: '',
+    youtube_client_secret: '',
+    // Written by the OAuth callback only, never by the settings form.
+    youtube_refresh_token: '',
+    youtube_channel_id: '',
+    youtube_channel_title: '',
+    // What the upload button picks by default: private, unlisted or public.
+    youtube_default_privacy: 'private',
+    // '1': tell YouTube the video contains realistic AI-made material (its "altered or synthetic content" label).
+    youtube_synthetic_media: '1',
 };
+
+/**
+ * Settings that only the server may read or write through dedicated code paths: secrets, and what the
+ * OAuth callback stores. The generic settings form skips these, and GET /api/settings leaves them out.
+ */
+export const SERVER_ONLY_SETTINGS = new Set([
+    'anthropic_api_key',
+    'youtube_client_secret',
+    'youtube_refresh_token',
+    'youtube_channel_id',
+    'youtube_channel_title',
+]);
 
 export function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();

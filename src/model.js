@@ -58,6 +58,11 @@ export function serializeRelease(r, user) {
       yt_description: r.yt_description,
       yt_tags: r.yt_tags,
       yt_generated_with: r.yt_generated_with,
+            // The video the app uploaded itself, and what YouTube last said about it.
+            youtube_video_id: r.youtube_video_id || '',
+            yt_privacy: r.yt_privacy || '',
+            yt_publish_at: r.yt_publish_at || '',
+            yt_uploaded_at: r.yt_uploaded_at || '',
     });
   }
   return out;

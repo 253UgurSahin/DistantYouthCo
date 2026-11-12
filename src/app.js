@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import { ROOT_DIR, MAX_UPLOAD_MB } from './config.js';
-import { db, getSettings, saveSettings, tx, DEFAULT_SETTINGS } from './db.js';
+import { db, getSettings, saveSettings, tx, DEFAULT_SETTINGS, SERVER_ONLY_SETTINGS } from './db.js';
 import {
   hashPassword, verifyPassword, validateCredentials, createSession, destroySession, sessionMiddleware,
   requireUser, requireAdmin, requireAjaxHeader, loginRateLimit, purgeExpiredSessions,
@@ -17,6 +17,10 @@ import { generateYoutubeKit, extractBpm, LIMITS, claudeConfigured } from './yout
 import { suggestNames } from './albumnames.js';
 import { computeStats, PERIODS } from './stats.js';
 import { ClaudeError } from './claude.js';
+import {
+    YoutubeError, PRIVACY, youtubeStatus, redirectUriFor, beginAuth, finishAuth, disconnect,
+    forgetConnectionIfClientChanged, startUpload, uploadJob, syncVideoStatus,
+} from './youtube-api.js';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -66,6 +70,20 @@ const idParam = (v) => {
   return n;
 };
 const slug = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'release';
+
+/**
+ * The moment a scheduled video goes public. The browser sends an ISO time (it converts the artist's
+ * local time itself). YouTube wants it in the future; a few minutes of margin covers the time it takes
+ * to open the upload session. Returns the ISO string YouTube gets.
+ */
+function publishAtOrThrow(v) {
+    if (typeof v !== 'string' || !v) throw bad('Kies wanneer de video live moet gaan.');
+    const t = Date.parse(v);
+    if (Number.isNaN(t)) throw bad('Dat publicatiemoment is geen geldige datum en tijd.');
+    if (t < Date.now() + 5 * 60_000) throw bad('Kies een publicatiemoment dat minstens 5 minuten in de toekomst ligt.');
+    if (t > Date.now() + 366 * 86400_000) throw bad('Kies een publicatiemoment binnen een jaar.');
+    return new Date(t).toISOString();
+}
 
 // ---------- the app ----------
 
@@ -183,29 +201,86 @@ export function createApp() {
 
   // ---------- settings (admin) ----------
 
-  app.get('/api/settings', requireAdmin, (_req, res) => {
+  app.get('/api/settings', requireAdmin, (req, res) => {
     const s = getSettings();
-    const { anthropic_api_key, ...rest } = s;
+    const { anthropic_api_key } = s;
+        // Secrets and OAuth-only values stay on the server; the YouTube block below says what the screen needs.
+        const rest = Object.fromEntries(Object.entries(s).filter(([k]) => !SERVER_ONLY_SETTINGS.has(k)));
     res.json({
       settings: rest,
       claude: { configured: claudeConfigured(s), key_saved: Boolean(anthropic_api_key), from_env: !anthropic_api_key && claudeConfigured(s) },
+            youtube: youtubeStatus(s, redirectUriFor(req), req.user.id),
     });
   });
 
   app.put('/api/settings', requireAdmin, (req, res) => {
     const b = req.body || {};
     const values = {};
+        const before = getSettings();
     for (const key of Object.keys(DEFAULT_SETTINGS)) {
-      if (key === 'anthropic_api_key' || !(key in b)) continue;
+            // Secrets have their own rules below; OAuth values are written by the callback only.
+            if (SERVER_ONLY_SETTINGS.has(key) || !(key in b)) continue;
+            if (key === 'youtube_default_privacy') {
+                if (!PRIVACY.includes(b[key])) throw bad('Kies privé, verborgen of openbaar als standaard.');
+                values[key] = b[key];
+            } else if (key === 'youtube_synthetic_media') {
+                values[key] = bool(b[key]) ? '1' : '0';
+            } else {
       values[key] = key.endsWith('_url') ? urlOrEmpty(b[key], key) : text(b[key], 2000, key);
+            }
     }
     if (typeof b.anthropic_api_key === 'string' && b.anthropic_api_key.trim()) {
       values.anthropic_api_key = text(b.anthropic_api_key, 300, 'API key');
     }
     if (b.clear_api_key === true) values.anthropic_api_key = '';
+        // Like the Claude key: an empty field means "keep the saved one", never "erase it".
+        if (typeof b.youtube_client_secret === 'string' && b.youtube_client_secret.trim()) {
+            values.youtube_client_secret = text(b.youtube_client_secret, 300, 'Client secret');
+        }
     saveSettings(values);
+        // A refresh token belongs to the OAuth client that issued it: a new client ID means connecting again.
+        if ('youtube_client_id' in values) forgetConnectionIfClientChanged(before.youtube_client_id, values.youtube_client_id);
     res.json({ ok: true });
   });
+
+    // ---------- YouTube: connect the channel (admin) ----------
+
+    // These two are page navigations, not API calls: the browser goes to Google and comes back here. So
+    // they answer with redirects to the settings screen instead of JSON. The outcome is kept on the
+    // server (see youtubeStatus.last_auth); the URL only says "done", so nobody can put text in it.
+    const backToSettings = '/#/instellingen?youtube=klaar';
+
+    app.get('/oauth/youtube/start', (req, res) => {
+        if (req.user?.role !== 'admin') return res.redirect(303, '/#/instellingen');
+        let url;
+        try {
+            url = beginAuth(req.user.id, redirectUriFor(req));
+        } catch (e) {
+            if (!(e instanceof YoutubeError)) throw e;
+            // Not set up yet: back to the screen, which shows what is missing.
+            return res.redirect(303, '/#/instellingen');
+        }
+        res.set('Cache-Control', 'no-store');
+        res.redirect(303, url);
+    });
+
+    app.get('/oauth/youtube/callback', async (req, res) => {
+        // SameSite=Lax sends the session cookie on this top-level return from Google, so req.user is set.
+        if (req.user?.role !== 'admin') return res.redirect(303, '/#/instellingen');
+        const q = (k) => (typeof req.query[k] === 'string' ? req.query[k] : '');
+        try {
+            await finishAuth(req.user.id, { state: q('state'), code: q('code'), error: q('error') });
+        } catch {
+            // finishAuth already recorded the message for the settings screen.
+        }
+        res.set('Cache-Control', 'no-store');
+        res.redirect(303, backToSettings);
+    });
+
+    app.post('/api/youtube/disconnect', requireAdmin, async (_req, res) => {
+        await disconnect();
+        res.json({ ok: true });
+    });
 
   // ---------- releases ----------
 
@@ -358,6 +433,38 @@ export function createApp() {
     res.json({ release: serializeRelease(getRelease(id, req.user), req.user) });
   });
 
+    // ---------- YouTube: upload straight to the channel (admin) ----------
+
+    // Starts the upload in the background and answers 202 at once; the browser follows the job with GET.
+    // Body: { privacy: private | unlisted | public | scheduled, publish_at (ISO, for scheduled), force }.
+    app.post('/api/releases/:id/youtube/upload', requireAdmin, (req, res) => {
+        const id = idParam(req.params.id);
+        const r = db.prepare('SELECT * FROM releases WHERE id = ?').get(id);
+        if (!r) throw notFound('Release niet gevonden.');
+        const b = req.body || {};
+        // A second upload makes a second video on the channel: only when the artist confirmed it.
+        if (r.youtube_video_id && b.force !== true) {
+            throw new HttpError(409, 'Deze release staat al op YouTube. Bevestig dat je hem nog een keer wilt uploaden.');
+        }
+        const scheduled = b.privacy === 'scheduled';
+        const privacy = scheduled ? 'private' : b.privacy;
+        if (!PRIVACY.includes(privacy)) throw bad('Kies of de video privé, verborgen, openbaar of ingepland wordt.');
+        const publishAt = scheduled ? publishAtOrThrow(b.publish_at) : '';
+        res.status(202).json({ job: startUpload(id, { privacy, publishAt }) });
+    });
+
+    // The current or last upload of this release (null when there is none since the server started).
+    app.get('/api/releases/:id/youtube/upload', requireAdmin, (req, res) => {
+        res.json({ job: uploadJob(idParam(req.params.id)) });
+    });
+
+    // Asks YouTube whether the video is public yet, and updates the release with what it says.
+    app.post('/api/releases/:id/youtube/sync', requireAdmin, async (req, res) => {
+        const id = idParam(req.params.id);
+        const result = await syncVideoStatus(id);
+        res.json({ sync: result, release: serializeRelease(getRelease(id, req.user), req.user) });
+    });
+
   app.post('/api/releases/:id/status', requireAdmin, (req, res) => {
     const id = idParam(req.params.id);
     const r = db.prepare('SELECT * FROM releases WHERE id = ?').get(id);
@@ -369,6 +476,11 @@ export function createApp() {
     const on_spotify = b.on_spotify === undefined ? r.on_spotify : bool(b.on_spotify) ? 1 : 0;
     db.prepare("UPDATE releases SET youtube_url = ?, spotify_url = ?, on_youtube = ?, on_spotify = ?, updated_at = datetime('now') WHERE id = ?")
       .run(youtube_url, spotify_url, on_youtube, on_spotify, id);
+        // A link by hand that no longer points at the video the app uploaded: forget that video, so the
+        // status check stops overwriting what the artist set here, and a new upload needs no extra "yes".
+        if (r.youtube_video_id && !youtube_url.includes(r.youtube_video_id)) {
+            db.prepare("UPDATE releases SET youtube_video_id = '', yt_privacy = '', yt_publish_at = '' WHERE id = ?").run(id);
+        }
     res.json({ release: serializeRelease(getRelease(id, req.user), req.user) });
   });
 
@@ -542,6 +654,8 @@ export function createApp() {
       return res.status(400).json({ error: msg });
     }
     if (err instanceof ClaudeError) return res.status(err.status).json({ error: err.message });
+        // YouTube errors carry a Dutch message that is safe to show.
+        if (err instanceof YoutubeError) return res.status(err.status).json({ error: err.message });
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Ongeldige gegevens.' });
     if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Te veel gegevens in één keer.' });
