@@ -141,7 +141,7 @@ export async function releaseView(id) {
         el('span', { class: 'status' }, moon(r.youtube_state), `YouTube — ${YT_WORDS[r.youtube_state]}`,
           r.youtube_url ? el('a', { href: r.youtube_url, target: '_blank', rel: 'noopener', 'aria-label': 'Open op YouTube' }, icon('external-link', 'xs')) : null))));
 
-  const lyrics = el('section', { class: 'lyrics scroll-in', 'aria-labelledby': 'lyr-h' },
+  const lyrics = el('section', { class: 'lyrics rise', style: { '--i': '5' }, 'aria-labelledby': 'lyr-h' },
     el('h2', { id: 'lyr-h', class: 'label' }, 'Lyrics'),
     sections.length
       ? sections.map((s) => el('div', {},
