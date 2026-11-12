@@ -132,7 +132,7 @@ export async function releaseView(id) {
         el('span', { class: 'spacer' }),
         admin ? el('a', { class: 'btn lg', href: `#/release/${r.id}/youtube` }, 'YouTube-kit') : null,
         admin ? el('a', { class: 'btn subtle lg', href: `#/release/${r.id}/bewerken` }, icon('pencil', 'sm'), 'Bewerken') : null),
-      el('div', { class: 'lean lean-plain status-rows rise', style: { '--i': '5' }, 'data-depth-layer': '2', role: 'group', 'aria-label': 'Onderweg naar live' },
+      el('div', { class: 'lean lean-plain status-rows rise', style: { '--i': '5' }, role: 'group', 'aria-label': 'Onderweg naar live' },
         el('span', { class: 'label' }, 'Onderweg naar live'),
         el('span', { class: 'status' }, moon(r.on_spotify ? 'live' : 'none'), `Spotify — ${r.on_spotify ? 'live' : 'nog niet'}`,
           r.spotify_url ? el('a', { href: r.spotify_url, target: '_blank', rel: 'noopener', 'aria-label': 'Open op Spotify' }, icon('external-link', 'xs')) : null),

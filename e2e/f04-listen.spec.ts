@@ -63,3 +63,19 @@ test('F04-H5 the video plays in the app\'s own player, and the music pauses for 
   await page.getByRole('button', { name: 'Video pauzeren' }).click();
   await expect(page.getByRole('button', { name: 'Video afspelen' })).toBeVisible();
 });
+
+test('F04-E1 scrolling the release page never puts the status card over the buttons', async ({ page }) => {
+  await page.goto(`/#/release/${SEED.lanterns}`);
+  const card = page.getByRole('group', { name: 'Onderweg naar live' });
+  const play = page.getByRole('button', { name: 'Afspelen' }).first();
+  await expect(card).toBeVisible();
+  for (const y of [0, 120, 240, 360]) {
+    await page.mouse.wheel(0, y ? 120 : 0);
+    await page.waitForTimeout(700); // the eased depth motion settles
+    const a = await card.boundingBox();
+    const b = await play.boundingBox();
+    if (!a || !b) continue;
+    const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    expect(overlap, `after ${y}px of scroll the card covers Afspelen`).toBe(false);
+  }
+});

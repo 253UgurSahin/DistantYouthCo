@@ -610,3 +610,7 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 @media (max-width: 640px) { .table th:nth-child(2), .table td:nth-child(2) { display: none; } .table td:last-child { width: 1%; } }
 @media (max-width: 640px) { .lean.lean-plain { transform: perspective(600px) rotateX(12deg); } }
 .lean-plain .status a { min-width: 32px; min-height: 32px; }
+
+/* ---------- run 2, look review round 4 ---------- */
+/* B012: the release card keeps a clear row above it */
+.release-head .lean-plain { margin-top: var(--space-2); }
