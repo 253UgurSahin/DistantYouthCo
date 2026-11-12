@@ -22,7 +22,7 @@ export function releaseCard(r, list, i) {
   const isPlaying = player.current?.id === r.id;
   return el('div', { class: `card rise ${isPlaying ? 'playing' : ''}`, style: { '--i': String(Math.min(i, 8)) } },
     el('div', { class: 'cover-wrap' },
-      el('a', { href: `#/release/${r.id}`, 'aria-label': r.title }, coverEl(r, '', { gray: true, tilt: true })),
+      coverEl(r, '', { gray: true, tilt: true }),
       r.audio_url
         ? el('button', { class: 'icon-btn solid play-on-cover', type: 'button', 'aria-label': `Speel ${r.title}`, onclick: () => player.playList(list, i) }, icon('play', 'sm'))
         : null),

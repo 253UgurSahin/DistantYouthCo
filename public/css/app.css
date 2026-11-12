@@ -509,3 +509,8 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 1px var(--color-border), 0 0 0 4px var(--color-bg), 0 0 0 5px var(--color-border); margin-right: var(--space-3); font: 600 12px/1 var(--font-display); text-transform: uppercase; vertical-align: middle; }
 .table td.date { white-space: nowrap; letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) { .cover.big[data-depth], .stacked .cover { rotate: none; } }
+
+/* Targets of at least 24 px for every small link (WCAG 2.5.8) */
+.card > a.title { display: inline-flex; align-items: center; min-height: 24px; }
+.status a, a.small, .steps a.small { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; min-width: 24px; }
+@media (hover: none) { .card .play-on-cover { opacity: 1; } }
