@@ -7,3 +7,4 @@ scripts
 .env
 .env.*
 *.log
+e2e

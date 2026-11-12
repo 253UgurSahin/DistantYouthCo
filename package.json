@@ -23,6 +23,7 @@
     "node": ">=22.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "lucide-static": "^1.72.0"
   }
 }
