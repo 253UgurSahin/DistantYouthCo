@@ -638,3 +638,9 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .lyrics { background: transparent; }
 /* the home card leans its near edge toward you: keep it clear of the window's edge */
 @media (min-width: 641px) { .hero-front .wrap { padding-right: 88px; } }
+/* reduced motion, as the depth kit does it: cards lie flat, without the shadow of something that floats,
+   covers and stacks rest straight; nothing is taken away. Last in the file, so it wins over the leans above. */
+@media (prefers-reduced-motion: reduce) {
+  .lean, .lean.lean-plain, .lean-panel { transform: none; box-shadow: none; }
+  .cover.big[data-depth], .stacked .cover { rotate: none; }
+}
