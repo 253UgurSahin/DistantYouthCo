@@ -126,6 +126,7 @@ export function standPanel(first, onFilter) {
       const m = d.months[i - offset];
       b.classList.toggle('folded', !m);
       b.classList.toggle('zero', Boolean(m) && m.count === 0);
+      b.classList.toggle('now', Boolean(m) && i === SLOTS - 1);
       b.style.setProperty('--h', m ? `${m.count ? Math.max(8, (m.count / max) * 100) : 3}%` : '0%');
       b.title = m ? `${longLabel(m.month)}: ${m.count}` : '';
       labelEls[i].textContent = m ? label(m.month) : '';

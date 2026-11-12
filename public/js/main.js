@@ -63,7 +63,7 @@ function header(active) {
     el('a', { class: 'brand', href: '#/' }, el('img', { src: '/img/emblem.png', alt: '' }), el('span', {}, el('b', {}, 'DISTANT YOUTH'), el('small', {}, 'STUDIO'))),
     el('nav', { class: 'nav', 'aria-label': 'Hoofdmenu' }, navLink('#/', 'Releases', 'releases'), navLink('#/collecties', 'Collecties', 'collecties'), navLink('#/playlists', 'Playlists', 'playlists')),
     el('a', { class: 'icon-btn', href: '#/?focus=search', 'aria-label': 'Zoeken' }, icon('search', 'sm')),
-    isAdmin() ? el('a', { class: 'btn primary btn-new', href: '#/nieuw', 'aria-label': 'Nieuwe release' }, icon('plus', 'sm'), el('span', {}, 'Nieuwe release')) : null,
+    isAdmin() ? el('a', { class: 'btn btn-new', href: '#/nieuw', 'aria-label': 'Nieuwe release' }, icon('plus', 'sm'), el('span', {}, 'Nieuwe release')) : null,
     el('div', { class: 'menu' }, menuBtn, menuPanel)));
 }
 

@@ -235,7 +235,7 @@ export async function youtubeView(id, query) {
   } }, icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer');
 
   const extra = el('input', { class: 'input', id: 'yt-extra', maxlength: 1000, placeholder: 'bv. noem dat dit deel 2 is van de Japanese-Inspired reeks' });
-  const genBtn = el('button', { type: 'button', class: 'btn primary lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
+  const genBtn = el('button', { type: 'button', class: 'btn lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
   const genNote = el('div', { class: 'small muted', 'aria-live': 'polite' }, r.yt_generated_with ? `Laatst gemaakt met ${r.yt_generated_with === 'template' ? 'het template' : 'Claude'}` : '');
   const generate = async () => {
     if (r.yt_description && dirty && !(await confirmDialog('Opnieuw genereren?', 'Je aanpassingen in de tekst worden overschreven.', 'Overschrijven'))) return;
@@ -298,7 +298,7 @@ export async function youtubeView(id, query) {
         genNote,
         el('section', { class: 'panel stack', 'aria-labelledby': 'yt-title-h' },
           el('div', { class: 'row' }, el('h2', { id: 'yt-title-h', class: 'label', style: { flex: 1 } }, 'Titel'), el('label', { for: 'yt-type', class: 'small muted' }, 'Type'), vtype),
-          el('div', { class: 'row', style: { flexWrap: 'nowrap' } }, titleIn, copyBtn('Titel', titleIn)), tc.c),
+          el('div', { class: 'copy-row' }, titleIn, copyBtn('Titel', titleIn)), tc.c),
         el('section', { class: 'panel stack', 'aria-labelledby': 'yt-desc-h' },
           el('div', { class: 'row' }, el('h2', { id: 'yt-desc-h', class: 'label', style: { flex: 1 } }, 'Beschrijving'), copyBtn('Beschrijving', descIn, true)),
           el('label', { for: 'yt-desc', class: 'sr-only' }, 'YouTube-beschrijving'), descIn, dc.c),
@@ -317,7 +317,7 @@ export async function youtubeView(id, query) {
             el('li', {}, el('span', { class: 'step-nr' }, '3'), el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Plak alles in YouTube Studio'),
               el('a', { class: 'small', href: 'https://studio.youtube.com', target: '_blank', rel: 'noopener' }, 'studio.youtube.com ', icon('external-link', 'xs')))),
             el('li', {}, step4, el('div', { class: 'grow' }, el('label', { for: 'yt-url', class: 'small', style: { fontWeight: 700 } }, 'Plak de link van je video'), ytUrl,
-              el('button', { type: 'button', class: 'btn primary', onclick: () => markLive().catch(fail) }, 'Markeer als op YouTube'))))),
+              el('button', { type: 'button', class: 'btn', onclick: () => markLive().catch(fail) }, 'Markeer als op YouTube'))))),
         el('section', { class: 'panel', 'aria-labelledby': 'src-h' },
           el('h2', { id: 'src-h', class: 'label' }, 'Gebruikt als bron'),
           el('div', { class: 'stack', style: { gap: '10px' } },
@@ -364,9 +364,9 @@ export async function accountsView() {
     el('div', { class: 'table-wrap' }, el('table', { class: 'table' },
       el('thead', {}, el('tr', {}, el('th', {}, 'Naam'), el('th', {}, 'Rol'), el('th', {}, 'Sinds'), el('th', {}, el('span', { class: 'sr-only' }, 'Acties')))),
       el('tbody', {}, users.map((u) => el('tr', {},
-        el('td', {}, u.username, u.id === session.user.id ? el('span', { class: 'faint' }, ' (jij)') : null),
+        el('td', {}, el('span', { class: 'avatar', 'aria-hidden': 'true' }, u.username.slice(0, 1)), u.username, u.id === session.user.id ? el('span', { class: 'faint' }, ' (jij)') : null),
         el('td', {}, u.role === 'admin' ? 'Admin' : 'Luisteraar'),
-        el('td', { class: 'muted' }, new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')),
+        el('td', { class: 'muted date' }, new Date(u.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('nl-NL')),
         el('td', { style: { textAlign: 'right' } },
           el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `Nieuw wachtwoord voor ${u.username}`, onclick: () => reset(u).catch(fail) }, icon('key-round', 'sm')),
           u.id !== session.user.id ? el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `${u.username} verwijderen`, onclick: () => remove(u).catch(fail) }, icon('trash-2', 'sm')) : null)))))));

@@ -58,7 +58,8 @@ export function trackRow(r, list, i, tools) {
     r.audio_url
       ? el('button', { type: 'button', class: 'cover-btn', style: { background: 'none', border: '0', padding: '0' }, 'aria-label': `Speel ${r.title}`, onclick: () => player.playList(list, i) }, coverEl(r, 'xs', { gray: true }))
       : coverEl(r, 'xs', { gray: true }),
-    el('a', { class: 't', href: `#/release/${r.id}` }, el('span', { class: 'title' }, r.title), el('span', { class: 'small muted' }, r.style ? r.style.split(',')[0] : '')),
+    el('a', { class: 't', href: `#/release/${r.id}` }, el('span', { class: 'title' }, r.title), el('span', { class: 'small muted' }, r.style ? r.style.split(',')[0] : ''),
+      el('span', { class: 'mini' }, moon(r.youtube_state, 'sm'), `YouTube ${YT[r.youtube_state]}`, moon(r.on_spotify ? 'live' : 'none', 'sm'), `Spotify ${r.on_spotify ? 'live' : 'niet uit'}`, r.duration ? ` · ${fmtTime(r.duration)}` : '')),
     el('span', { class: 'badges', 'aria-label': 'Bestanden' },
       el('span', {}, 'WAV'), el('span', { class: r.has.mp3 ? '' : 'off' }, 'MP3'), el('span', { class: r.has.video ? '' : 'off' }, 'MP4')),
     el('span', { class: 'st' },
@@ -97,7 +98,7 @@ export async function addToPlaylist(release) {
 export function namesPanel(kind, id, onUse) {
   const out = el('div', { class: 'names' });
   const dir = el('input', { class: 'input', id: `dir-${kind}`, placeholder: 'bv. kort, één woord, iets met nacht', maxlength: 300 });
-  const btn = el('button', { type: 'button', class: 'btn primary lg' }, 'Stel namen voor');
+  const btn = el('button', { type: 'button', class: 'btn lg' }, 'Stel namen voor');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');

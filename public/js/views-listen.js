@@ -115,7 +115,7 @@ export async function releaseView(id) {
   const sections = parseLyrics(r.lyrics);
 
   const head = el('section', { class: 'release-head' },
-    coverEl(r, 'big'),
+    coverEl(r, 'big', { tilt: true }),
     el('div', { class: 'copy' },
       el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? `Release · collectie ${r.folder_name}` : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
       el('h1', { class: 'h-display rise', style: { '--i': '2' } }, r.title),
@@ -135,8 +135,8 @@ export async function releaseView(id) {
 
   const lyrics = el('section', { class: 'lyrics rise', style: { '--i': '5' }, 'aria-labelledby': 'lyr-h' },
     el('h2', { id: 'lyr-h', class: 'label' }, 'Lyrics'),
-    sections.length
-      ? sections.map((s) => el('div', {},
+    sections.some((s) => s.lines.length)
+      ? sections.filter((s) => s.lines.length).map((s) => el('div', {},
         s.name ? el('h3', {}, s.name) : null,
         s.lines.map((line) => el('p', { class: line === hook ? 'hook' : '' }, line))))
       : el('p', {}, 'Geen lyrics — instrumentaal of nog niet ingevuld.'));
