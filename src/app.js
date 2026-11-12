@@ -10,11 +10,12 @@ import {
 } from './auth.js';
 import { upload, sniff, storeUpload, storedPath, removeStored, cleanupUploads, releaseDir, KIND_LABEL, KIND_COLUMN } from './files.js';
 import {
-  serializeRelease, getRelease, listReleases, processRelease, touchRelease, releaseStatus, folderSummary,
+  serializeRelease, getRelease, listReleases, processRelease, touchRelease, folderSummary,
   canSeePlaylist, canEditPlaylist, playlistReleases, serializePlaylist,
 } from './model.js';
 import { generateYoutubeKit, extractBpm, LIMITS, claudeConfigured } from './youtube.js';
 import { suggestNames } from './albumnames.js';
+import { computeStats, PERIODS } from './stats.js';
 import { ClaudeError } from './claude.js';
 
 class HttpError extends Error {
@@ -525,21 +526,9 @@ export function createApp() {
   // ---------- stats ----------
 
   app.get('/api/stats', requireUser, (req, res) => {
-    const releases = listReleases(req.user);
-    const counts = { live: 0, ready: 0, concept: 0 };
-    for (const r of releases) counts[releaseStatus(r)] += 1;
-    const months = [];
-    const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-      months.push({ month: d.toISOString().slice(0, 7), count: 0 });
-    }
-    for (const r of releases) {
-      const m = (r.release_date || r.created_at || '').slice(0, 7);
-      const slot = months.find((x) => x.month === m);
-      if (slot) slot.count += 1;
-    }
-    res.json({ total: releases.length, counts, months });
+    const months = req.query.months === undefined ? 12 : Number(req.query.months);
+    if (!PERIODS.includes(months)) throw bad(`Kies een periode van ${PERIODS.join(', ')} maanden.`);
+    res.json(computeStats(listReleases(req.user), { months, admin: req.user.role === 'admin' }));
   });
 
   // ---------- errors ----------

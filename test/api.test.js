@@ -149,6 +149,18 @@ test('a listener cannot upload, manage or see hidden releases', async () => {
   assert.equal((await listener.req('GET', `/media/${releaseId}/audio`, undefined, { raw: true })).status, 200);
 });
 
+test('dashboard: a listener\'s numbers leave out hidden releases and admin-only columns', async () => {
+  const a = await admin.req('GET', '/api/stats?months=6');
+  const l = await listener.req('GET', '/api/stats?months=6');
+  assert.equal(a.status, 200);
+  assert.equal(a.body.total, 2, 'the admin counts the hidden demo too');
+  assert.equal(l.body.total, 1, 'the listener does not');
+  assert.ok(!l.body.matrix.rows.some((r) => r.id === hiddenId));
+  assert.ok(!l.body.matrix.columns.some((c) => c.key === 'yt_text'));
+  assert.equal((await listener.req('GET', '/api/stats?months=7')).status, 400);
+  assert.equal((await new Client().req('GET', '/api/stats')).status, 401);
+});
+
 test('media needs a session and supports ranges', async () => {
   assert.equal((await new Client().req('GET', `/media/${releaseId}/audio`, undefined, { raw: true })).status, 401);
   const res = await fetch(`${base}/media/${releaseId}/wav`, { headers: { Cookie: admin.cookie, Range: 'bytes=0-9' } });
