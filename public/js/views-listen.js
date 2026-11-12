@@ -2,14 +2,14 @@ import { el, icon, moon, fmtTime, fmtDate, fmtDuration, styleFacts, parseLyrics,
 import { api } from './api.js';
 import { player } from './player.js';
 import { isAdmin } from './session.js';
+import { standPanel } from './dashboard.js';
 import { coverEl, sectionHead, emptyState, releaseCard, collectionCard, playlistCard, trackRow, addToPlaylist, namesPanel } from './parts.js';
 
-const MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
 // ---------- S01 Releases (home) ----------
 
 export async function homeView(query) {
-  const [{ releases }, { folders }, stats] = await Promise.all([api('/releases'), api('/folders'), api('/stats')]);
+  const [{ releases }, { folders }, stats] = await Promise.all([api('/releases'), api('/folders'), api('/stats?months=12')]);
   const latest = releases.find((r) => r.audio_url) || releases[0];
   const page = el('div');
 
@@ -57,7 +57,7 @@ export async function homeView(query) {
   const grid = el('div', { class: 'grid' });
   const count = el('span', { class: 'small faint' });
   const chipsEl = el('div', { class: 'chips', role: 'group', 'aria-label': 'Filter op status' });
-  const statButtons = [];
+  let stand = null;
   const draw = () => {
     const t = term.toLowerCase();
     const shown = releases.filter((r) => (filter === 'all' || r.status === filter) &&
@@ -65,7 +65,7 @@ export async function homeView(query) {
     grid.replaceChildren(...(shown.length ? shown.map((r, i) => releaseCard(r, shown, i)) : [emptyState('Niets gevonden met dit filter.')]));
     count.textContent = `${shown.length} van ${releases.length}`;
     for (const b of chipsEl.children) b.setAttribute('aria-pressed', String(b.dataset.f === filter));
-    for (const b of statButtons) b.setAttribute('aria-pressed', String(b.dataset.f === filter));
+    stand?.setActive(filter);
     window.dispatchEvent(new CustomEvent('dyc:content'));
   };
   const setFilter = (f) => {
@@ -92,21 +92,13 @@ export async function homeView(query) {
       el('div', { class: 'coll-grid' }, folders.slice(0, 6).map((f, i) => collectionCard(f, i + 1)))));
   }
 
-  // The stand of the night: the dashboard of this app (level 3).
-  const max = Math.max(1, ...stats.months.map((m) => m.count));
-  const statBtn = (f, label) => {
-    const b = el('button', { type: 'button', class: 'stat', dataset: { f }, 'aria-pressed': 'false', onclick: () => { setFilter(f); grid.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
-      el('b', {}, String(stats.counts[f])), el('span', {}, moon(f, 'sm'), label));
-    statButtons.push(b);
-    return b;
-  };
-  body.append(el('section', { class: 'panel scroll-in stack', 'aria-labelledby': 'stand-h', style: { gap: 'var(--space-6)' } },
-    el('div', { class: 'section-head' }, el('h2', { id: 'stand-h' }, 'De stand van de nacht'), el('span', { class: 'rule' }), el('span', { class: 'small faint' }, `${stats.total} releases`)),
-    el('div', { class: 'stats' }, statBtn('live', 'Live'), statBtn('ready', 'Klaar voor YouTube'), statBtn('concept', 'Concept')),
-    el('div', { class: 'stack', style: { gap: '6px' } },
-      el('div', { class: 'bars', role: 'img', 'aria-label': `Releases per maand, laatste 12 maanden: ${stats.months.map((m) => `${MONTHS[Number(m.month.slice(5)) - 1]} ${m.count}`).join(', ')}` },
-        stats.months.map((m, i) => el('i', { class: m.count ? '' : 'zero', style: { height: `${m.count ? Math.max(8, (m.count / max) * 100) : 3}%`, '--i': String(i) }, title: `${m.month}: ${m.count}` }))),
-      el('div', { class: 'bar-labels', 'aria-hidden': 'true' }, stats.months.map((m) => el('span', {}, MONTHS[Number(m.month.slice(5)) - 1]))))));
+  // The stand of the night: the dashboard of this app (level 3). A number drills down to the grid.
+  stand = standPanel(stats, (f) => {
+    filter = f;
+    draw();
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  body.append(stand);
 
   draw();
   if (query.get('focus') === 'search') setTimeout(() => search.focus(), 50);
