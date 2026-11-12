@@ -1,0 +1,23 @@
+{
+  "name": "distantyouthco",
+  "version": "1.0.0",
+  "description": "Distant Youth Co. — persoonlijke muziekbibliotheek, player en YouTube-release-assistent",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "express": "^5.3.0",
+    "multer": "^2.5.0"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}
