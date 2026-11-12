@@ -6,14 +6,19 @@ export function claudeConfigured(settings) {
 }
 
 /** A user-facing error: its message is safe to show in the app. */
-export class ClaudeError extends Error {}
+export class ClaudeError extends Error {
+  constructor(message, status = 502) {
+    super(message);
+    this.status = status;
+  }
+}
 
 /**
  * One request that must come back as JSON matching `schema`. Uses structured outputs and the
  * server-side refusal fallback; returns { data, model }.
  */
 export async function claudeJson(settings, { system, user, schema, effort = 'medium' }) {
-  if (!claudeConfigured(settings)) throw new ClaudeError('Claude is niet ingesteld. Voeg een API key toe bij Instellingen.');
+  if (!claudeConfigured(settings)) throw new ClaudeError('Claude is niet ingesteld. Voeg een API key toe bij Instellingen.', 409);
   const client = new Anthropic(settings.anthropic_api_key ? { apiKey: settings.anthropic_api_key } : {});
   let response;
   try {

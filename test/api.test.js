@@ -115,6 +115,15 @@ test('the YouTube-kit falls back to the template without a Claude key', async ()
   const s = await admin.req('POST', `/api/folders`, { name: 'Japanese-Inspired' });
   const names = await admin.req('POST', `/api/folders/${s.body.folder.id}/suggest-names`, {});
   assert.equal(names.status, 400, 'an empty collection has nothing to name');
+  const fd = new FormData();
+  fd.append('title', 'In de map');
+  fd.append('hidden', '1');
+  fd.append('folder_id', String(s.body.folder.id));
+  fd.append('wav', new Blob([wav()]), 'm.wav');
+  await admin.req('POST', '/api/releases', fd);
+  const noKey = await admin.req('POST', `/api/folders/${s.body.folder.id}/suggest-names`, {});
+  assert.equal(noKey.status, 409, 'B003: not set up is not a server failure');
+  assert.match(noKey.body.error, /Claude is niet ingesteld/);
 });
 
 test('admin makes a listener and a second listener', async () => {
@@ -153,7 +162,7 @@ test('dashboard: a listener\'s numbers leave out hidden releases and admin-only 
   const a = await admin.req('GET', '/api/stats?months=6');
   const l = await listener.req('GET', '/api/stats?months=6');
   assert.equal(a.status, 200);
-  assert.equal(a.body.total, 2, 'the admin counts the hidden demo too');
+  assert.equal(a.body.total, 3, 'the admin counts the hidden concepts too');
   assert.equal(l.body.total, 1, 'the listener does not');
   assert.ok(!l.body.matrix.rows.some((r) => r.id === hiddenId));
   assert.ok(!l.body.matrix.columns.some((c) => c.key === 'yt_text'));
