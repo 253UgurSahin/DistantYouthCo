@@ -181,7 +181,7 @@ export async function youtubeView(id, query) {
   const [{ release: r, limits }, settings] = await Promise.all([api(`/releases/${id}`), api('/settings')]);
   let mode = settings.claude.configured ? 'claude' : 'template';
 
-  const titleIn = el('input', { class: 'input lg', id: 'yt-title', value: r.yt_title, 'aria-describedby': 'yt-title-count' });
+  const titleIn = el('input', { class: 'input lg', id: 'yt-title', value: r.yt_title, 'aria-labelledby': 'yt-title-h', 'aria-describedby': 'yt-title-count' });
   const descIn = el('textarea', { class: 'textarea yt-desc', id: 'yt-desc', value: r.yt_description, 'aria-describedby': 'yt-desc-count' });
   const tagsIn = el('textarea', { class: 'textarea', id: 'yt-tags', rows: 3, value: r.yt_tags, 'aria-describedby': 'yt-tags-count' });
   const counter = (id2, input, max, extra) => {
@@ -226,8 +226,8 @@ export async function youtubeView(id, query) {
     if (!quiet) toast('Opgeslagen');
   };
   const copyBtn = (label, input, primary) => el('button', { type: 'button', class: `btn ${primary ? 'primary' : 'subtle'}`, onclick: async (e) => {
+    const b = e.currentTarget; // read it now: after the await the event has no current target any more
     if (await copyText(input.value, `${label} gekopieerd`)) {
-      const b = e.currentTarget;
       b.replaceChildren(icon('check', 'sm'), 'Gekopieerd');
       setTimeout(() => b.replaceChildren(icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer'), 2000);
       if (dirty) saveTexts(true).catch(fail);
