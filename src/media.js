@@ -5,6 +5,7 @@ const run = promisify(execFile);
 
 let ffmpegAvailable = null;
 export async function hasFfmpeg() {
+  if (process.env.DYC_NO_FFMPEG === '1') return false;
   if (ffmpegAvailable !== null) return ffmpegAvailable;
   try {
     await run('ffmpeg', ['-version']);

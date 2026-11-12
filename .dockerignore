@@ -1,0 +1,9 @@
+node_modules
+data
+forge-work
+test
+scripts
+.git
+.env
+.env.*
+*.log

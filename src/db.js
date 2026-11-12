@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS releases (
   mp3_generated INTEGER NOT NULL DEFAULT 0,
   video_file TEXT,
   cover_file TEXT,
+  cover_generated INTEGER NOT NULL DEFAULT 0,
   duration REAL,
   yt_title TEXT NOT NULL DEFAULT '',
   yt_description TEXT NOT NULL DEFAULT '',

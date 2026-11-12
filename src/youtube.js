@@ -1,5 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { CLAUDE_MODEL } from './config.js';
+import { claudeConfigured, claudeJson } from './claude.js';
+
+export { claudeConfigured };
 
 // The reference description the generator imitates (supplied by the artist).
 export const EXAMPLE_DESCRIPTION = `# 🎵 Lanterns in the Rain — Distant Youth Co. (Official Visualizer)
@@ -105,7 +106,7 @@ export function toHashtag(s) {
   const slug = String(s)
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/^#/, '')
     .replace(/[^a-z0-9]/g, '');
   return slug ? `#${slug}` : '';
@@ -167,13 +168,13 @@ export function assembleDescription(parts, release, settings) {
 
 // ---------- template (no API key) ----------
 
-export function templateParts(release) {
+export function templateParts(release, settings = {}) {
   const tags = styleTags(release.style);
   const genre = tags[0] ? tags[0].toLowerCase() : 'electronic';
   const sections = parseLyrics(release.lyrics);
   const hook = findHookLine(release.lyrics);
   const paragraphs = [
-    `${release.title} is a ${genre} track by Distant Youth Co.`,
+    `${release.title} is a ${genre} track by ${(settings.artist_name || 'Distant Youth Co.').replace(/\.$/, '')}.`,
   ];
   if (tags.length > 1) {
     paragraphs.push(`Expect ${tags.slice(1, 6).map((t) => t.toLowerCase()).join(', ')} — built for headphones and big speakers alike.`);
@@ -187,7 +188,7 @@ export function templateParts(release) {
     dedication: '',
     closing_line: lastLine && lastLine !== hook ? lastLine : '',
     hashtags: tags.slice(0, 8),
-    youtube_tags: [release.title, 'Distant Youth Co.', ...tags],
+    youtube_tags: [release.title, settings.artist_name || 'Distant Youth Co.', ...tags],
   };
 }
 
@@ -238,13 +239,8 @@ Other fields:
 - hashtags: 6–9 song-specific hashtags; the application appends the artist's standard ones.
 - youtube_tags: 10–20 search phrases, including the song title and "Distant Youth Co.".`;
 
-export function claudeConfigured(settings) {
-  return Boolean(settings.anthropic_api_key || process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-}
-
 export async function claudeParts(release, settings, extra = '') {
-  const client = new Anthropic(settings.anthropic_api_key ? { apiKey: settings.anthropic_api_key } : {});
-  const userText = [
+  const user = [
     `<title>${release.title}</title>`,
     `<style_description>\n${release.style || '(none given)'}\n</style_description>`,
     release.bpm ? `<bpm>${release.bpm}</bpm>` : '',
@@ -253,36 +249,8 @@ export async function claudeParts(release, settings, extra = '') {
   ]
     .filter(Boolean)
     .join('\n\n');
-
-  let response;
-  try {
-    response = await client.beta.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 16000,
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      output_config: { effort: 'medium', format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userText }],
-    });
-  } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) throw new Error('Claude API key is ongeldig. Controleer Instellingen.');
-    if (err instanceof Anthropic.RateLimitError) throw new Error('Claude rate limit bereikt, probeer het zo opnieuw.');
-    if (err instanceof Anthropic.APIConnectionError) throw new Error('Kan Claude API niet bereiken (netwerk).');
-    if (err instanceof Anthropic.APIError) throw new Error(`Claude API fout ${err.status}: ${err.message}`);
-    throw err;
-  }
-
-  if (response.stop_reason === 'refusal') throw new Error('Claude weigerde deze tekst te schrijven. Pas de input aan of gebruik het template.');
-  if (response.stop_reason === 'max_tokens') throw new Error('Antwoord was te lang en werd afgekapt. Probeer opnieuw.');
-  const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  let parts;
-  try {
-    parts = JSON.parse(text);
-  } catch {
-    throw new Error('Kon het antwoord van Claude niet lezen. Probeer opnieuw.');
-  }
-  return { parts, model: response.model };
+  const { data, model } = await claudeJson(settings, { system: SYSTEM_PROMPT, user, schema: OUTPUT_SCHEMA });
+  return { parts: data, model };
 }
 
 /** Generate YouTube title, description and tags for a release. */
@@ -294,7 +262,7 @@ export async function generateYoutubeKit(release, settings, { useClaude = true, 
     parts = r.parts;
     generatedWith = r.model;
   } else {
-    parts = templateParts(release);
+    parts = templateParts(release, settings);
   }
   if (!parts.bpm) parts.bpm = release.bpm || extractBpm(release.style) || 0;
   const description = assembleDescription(parts, release, settings);
