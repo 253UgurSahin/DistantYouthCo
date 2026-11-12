@@ -9,6 +9,25 @@ const label = (m) => MONTHS[Number(m.slice(5)) - 1];
 const longLabel = (m) => `${LONG[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
 const hhmm = (iso) => new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+/** Counts a number up (or down) from what it shows now to `to`; at once for reduced motion. */
+function countTo(node, to) {
+  const from = Number(node.dataset.value ?? 0);
+  node.dataset.value = String(to);
+  if (reducedMotion.matches || from === to) {
+    node.textContent = String(to);
+    return;
+  }
+  const start = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - start) / 700);
+    node.textContent = String(Math.round(from + (to - from) * (1 - (1 - p) ** 3)));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 /** A small line of the last months for one status, as inline SVG. */
 function spark(values) {
   const w = 96;
@@ -38,6 +57,13 @@ export function standPanel(first, onFilter) {
   let timer = null;
 
   const updated = el('span', { class: 'small faint' });
+  // The numbers live across redraws, so a refresh or a new period counts from the old value.
+  const numbers = { live: el('b', {}, '0'), ready: el('b', {}, '0'), concept: el('b', {}, '0') };
+  const currentNumber = el('b', {}, '0');
+  const tileButton = (s, node, value) => {
+    countTo(numbers[s], value);
+    return node;
+  };
   const summary = el('p', { class: 'sr-only', 'aria-live': 'polite' });
   const compare = el('p', { class: 'compare' });
   const tiles = el('div', { class: 'stats' });
@@ -77,7 +103,7 @@ export function standPanel(first, onFilter) {
     const d = data;
     error.replaceChildren();
     // Tiles: number, moon, words, a spark line of the period; a click shows the releases behind it.
-    tiles.replaceChildren(...['live', 'ready', 'concept'].map((s) => el('button', {
+    tiles.replaceChildren(...['live', 'ready', 'concept'].map((s) => tileButton(s, el('button', {
       type: 'button', class: 'stat', 'aria-pressed': String(active === s),
       'aria-label': `${d.counts[s]} ${STATUS_WORDS[s].toLowerCase()}: toon deze releases`,
       onclick: () => {
@@ -85,12 +111,13 @@ export function standPanel(first, onFilter) {
         onFilter(active);
         draw();
       },
-    }, el('b', {}, String(d.counts[s])), el('span', {}, moon(s, 'sm'), STATUS_WORDS[s]), spark(d.months.map((m) => m.by[s])))));
+    }, numbers[s], el('span', {}, moon(s, 'sm'), STATUS_WORDS[s]), spark(d.months.map((m) => m.by[s]))), d.counts[s])));
 
     // The comparison with the period before.
     const c = d.comparison;
     const sign = c.change > 0 ? `+${c.change}` : String(c.change);
-    compare.replaceChildren(el('b', {}, String(c.current)), ` ${c.current === 1 ? 'release' : 'releases'} in de laatste ${d.period} maanden `,
+    countTo(currentNumber, c.current);
+    compare.replaceChildren(currentNumber, ` ${c.current === 1 ? 'release' : 'releases'} in de laatste ${d.period} maanden `,
       el('span', { class: `delta ${c.change > 0 ? 'up' : c.change < 0 ? 'down' : ''}` }, `${sign} t.o.v. de ${d.period} maanden ervoor (${c.previous})`));
 
     // The bars morph: the oldest slots fold to zero width when the period is shorter.

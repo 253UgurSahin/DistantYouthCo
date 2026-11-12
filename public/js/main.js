@@ -12,6 +12,7 @@ const main = document.getElementById('main');
 let depth = null;
 let renderId = 0;
 let closeMenu = () => {};
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) closeMenu(); });
 
 const ROUTES = [
@@ -108,7 +109,9 @@ async function route() {
     view = errorPage(e);
   }
   if (id !== renderId) return;
-  main.replaceChildren(view);
+  // A short cross-fade between screens; the header and the player stay where they are.
+  if (document.startViewTransition && !reducedMotion.matches) await document.startViewTransition(() => main.replaceChildren(view)).updateCallbackDone;
+  else main.replaceChildren(view);
   document.title = `${main.querySelector('h1')?.textContent || 'Releases'} — Distant Youth Studio`;
   window.scrollTo(0, 0);
   remountDepth();
