@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiError;
+use App\Support\Input;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
@@ -25,7 +26,7 @@ class Claude
         if (! $this->configured($settings)) {
             throw new ApiError(409, 'Claude is niet ingesteld. Voeg een API key toe bij Instellingen.');
         }
-        @set_time_limit(330);
+        Input::moreTime(330);
         try {
             $res = Http::withHeaders([
                 'x-api-key' => $this->key($settings),

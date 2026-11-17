@@ -15,6 +15,9 @@ class Release extends Model
 
     protected $guarded = ['id'];
 
+    /** Text columns have no default in the database (MySQL allows none on TEXT): empty here. */
+    protected $attributes = ['style' => '', 'lyrics' => '', 'notes' => '', 'yt_description' => '', 'yt_tags' => ''];
+
     protected function casts(): array
     {
         return [

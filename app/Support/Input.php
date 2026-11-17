@@ -100,6 +100,14 @@ final class Input
     }
 
     /** The size of one upload piece: well under this server's limits, at most 8 MB. */
+    /** More time for a long step, where the host allows it (a disabled set_time_limit throws, even with @). */
+    public static function moreTime(int $seconds): void
+    {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($seconds);
+        }
+    }
+
     public static function uploadChunk(): int
     {
         $limit = min(self::iniBytes('upload_max_filesize'), self::iniBytes('post_max_size'));

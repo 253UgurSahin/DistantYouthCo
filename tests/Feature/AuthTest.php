@@ -82,9 +82,11 @@ class AuthTest extends TestCase
 
     public function test_your_own_password_needs_the_current_one(): void
     {
-        $this->actingAs(User::factory()->create(['password' => self::pw('old')]));
+        $this->actingAs($me = User::factory()->create(['password' => self::pw('old')]));
+        DB::table('sessions')->insert(['id' => 'lost-phone', 'user_id' => $me->id, 'payload' => '', 'last_activity' => time()]);
         $this->app_()->postJson('/api/me/password', ['current' => self::pw('wrong'), 'password' => self::pw('new')])->assertStatus(400);
         $this->app_()->postJson('/api/me/password', ['current' => self::pw('old'), 'password' => self::pw('new')])->assertOk();
+        $this->assertFalse(DB::table('sessions')->where('id', 'lost-phone')->exists(), 'signed out on the other devices');
     }
 
     public function test_a_post_naming_another_method_acts_as_it_for_hosts_that_block_put_and_delete(): void

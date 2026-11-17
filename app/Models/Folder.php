@@ -10,6 +10,8 @@ class Folder extends Model
 {
     protected $fillable = ['name', 'description'];
 
+    protected $attributes = ['description' => ''];
+
     public function releases(): HasMany
     {
         return $this->hasMany(Release::class);

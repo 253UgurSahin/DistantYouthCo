@@ -27,6 +27,6 @@ RUN chmod +x /usr/local/bin/studio-entrypoint \
 VOLUME ["/var/www/html/storage"]
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-  CMD php -r "exit(@file_get_contents('http://127.0.0.1/api/session') === false ? 1 : 0);"
+  CMD php -r "exit(@file_get_contents('http://127.0.0.1/up') === false ? 1 : 0);"
 ENTRYPOINT ["studio-entrypoint"]
 CMD ["apache2-foreground"]

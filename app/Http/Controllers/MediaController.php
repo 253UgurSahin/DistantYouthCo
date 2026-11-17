@@ -15,6 +15,10 @@ class MediaController extends Controller
     public function show(Request $request, string $id, string $kind): BinaryFileResponse
     {
         $release = ReleaseController::find($request, $id);
+        // Listeners listen and watch; the files themselves (the master WAV, downloads) are the admin's.
+        if (! $request->user()->isAdmin() && (! in_array($kind, ['audio', 'video', 'cover'], true) || $request->query('download') !== null)) {
+            throw ApiError::notFound();
+        }
         $file = match ($kind) {
             'audio' => $release->filePath('mp3') ?? $release->filePath('wav'),
             'wav', 'mp3', 'video', 'cover' => $release->filePath($kind),

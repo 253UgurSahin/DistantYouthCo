@@ -137,8 +137,15 @@ class ReleaseController extends Controller
     private function afterFiles(Release $release): void
     {
         $this->files->quickInfo($release);
+        if (! ReleaseFiles::hasFfmpeg()) {
+            return;
+        }
         $id = $release->id;
-        defer(fn () => app(ReleaseFiles::class)->heavyWork($id));
+        // PHP-FPM and LiteSpeed send the answer first and then run the deferred work; mod_php and CGI
+        // would make the answer wait for ffmpeg, so there a separate PHP process does it.
+        if (function_exists('fastcgi_finish_request') || function_exists('litespeed_finish_request') || ! ReleaseFiles::inBackground($id)) {
+            defer(fn () => app(ReleaseFiles::class)->heavyWork($id));
+        }
     }
 
     private function fields(Request $request, ?Release $existing): array

@@ -51,7 +51,7 @@ class PlaylistController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $lists = Playlist::with('owner')->withCount('releases')
+        $lists = Playlist::with('owner')->withCount(['releases' => fn ($q) => $user->isAdmin() ? $q : $q->where('releases.is_hidden', false)])
             ->where(fn ($q) => $q->where('user_id', $user->id)->orWhere('is_public', true))
             ->orderBy('id')->get();
 

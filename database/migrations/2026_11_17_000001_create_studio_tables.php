@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('folders', function (Blueprint $table) {
             $table->id();
             $table->string('name', 120);
-            $table->text('description')->default('');
+            $table->text('description')->nullable();
             $table->timestamps();
         });
 
@@ -19,13 +19,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('folder_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title', 200);
-            $table->text('style')->default('');
-            $table->text('lyrics')->default('');
+            $table->text('style')->nullable();
+            $table->text('lyrics')->nullable();
             $table->unsignedSmallInteger('bpm')->nullable();
             $table->date('release_date')->nullable();
             $table->string('video_type', 60)->default('Official Visualizer');
             $table->boolean('is_hidden')->default(false); // a concept: listeners do not see it
-            $table->text('notes')->default('');
+            $table->text('notes')->nullable();
             // Stored file names inside storage/app/private/releases/{id}/
             $table->string('wav_file')->nullable();
             $table->string('mp3_file')->nullable();
@@ -36,8 +36,8 @@ return new class extends Migration
             $table->float('duration')->nullable();
             // The YouTube kit
             $table->string('yt_title', 300)->default('');
-            $table->text('yt_description')->default('');
-            $table->text('yt_tags')->default('');
+            $table->text('yt_description')->nullable();
+            $table->text('yt_tags')->nullable();
             $table->string('yt_generated_with', 80)->default('');
             // Where it is live
             $table->string('youtube_url', 500)->default('');
@@ -51,7 +51,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete(); // the owner
             $table->string('name', 120);
-            $table->text('description')->default('');
+            $table->text('description')->nullable();
             $table->boolean('is_public')->default(false);
             $table->timestamps();
         });

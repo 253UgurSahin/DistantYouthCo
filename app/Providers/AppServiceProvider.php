@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
         if (@file_get_contents($marker) === $version) {
             return;
         }
-        $lock = fopen(storage_path('app/.migrate.lock'), 'c');
+        $lock = fopen(storage_path('app/.migrate.lock'), 'c') ?: throw new \RuntimeException('storage/app is not writable');
         flock($lock, LOCK_EX);
         if (@file_get_contents($marker) !== $version) {
             Artisan::call('migrate', ['--force' => true]);

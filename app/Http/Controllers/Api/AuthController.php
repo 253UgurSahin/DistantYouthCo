@@ -9,6 +9,8 @@ use App\Support\Input;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -31,7 +33,8 @@ class AuthController extends Controller
 
     public function setup(Request $request): JsonResponse
     {
-        return $this->guarded($request, function () use ($request) {
+        // One at a time, so two visitors of a fresh install can never both become the admin.
+        return Cache::lock('studio-setup', 30)->block(10, fn () => $this->guarded($request, function () use ($request) {
             if (User::exists()) {
                 throw new ApiError(403, 'De admin bestaat al.');
             }
@@ -44,7 +47,7 @@ class AuthController extends Controller
             $this->signIn($request, $user);
 
             return response()->json(['user' => self::userJson($user)], 201);
-        });
+        }));
     }
 
     public function login(Request $request): JsonResponse
@@ -85,6 +88,8 @@ class AuthController extends Controller
             throw ApiError::bad($err);
         }
         $user->update(['password' => $request->input('password')]);
+        // Signed out everywhere else (a lost phone), not here.
+        DB::table('sessions')->where('user_id', $user->id)->where('id', '!=', $request->session()->getId())->delete();
 
         return response()->json(['ok' => true]);
     }

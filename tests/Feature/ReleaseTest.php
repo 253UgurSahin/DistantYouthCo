@@ -123,6 +123,12 @@ class ReleaseTest extends TestCase
         $d->assertOk();
         $this->assertStringContainsString('lanterns-in-the-rain-video.mp4', $d->headers->get('Content-Disposition'));
         $this->get("/media/$id/onzin")->assertNotFound();
+        // A listener listens and watches, but the master WAV and the downloads stay with the admin.
+        $this->actingAs($this->listener());
+        $this->get("/media/$id/audio")->assertOk();
+        $this->get("/media/$id/video")->assertOk();
+        $this->get("/media/$id/wav")->assertNotFound();
+        $this->get("/media/$id/video?download=1")->assertNotFound();
         auth()->logout();
         $this->get("/media/$id/audio")->assertStatus(401);
     }
@@ -150,6 +156,15 @@ class ReleaseTest extends TestCase
         $z->close();
 
         $this->get("/downloads/videos.zip?ids=$a")->assertOk();
+        // Every id counts, not only the first (a review found ids=1,12 gave just 1).
+        $c = $this->upload(['title' => 'Derde'], ['wav' => self::wav(), 'video' => self::mp4(900)])->json('release.id');
+        $b = collect($list)->pluck('id')->first(fn ($id) => $id !== $a);
+        file_put_contents($path, $this->get("/downloads/videos.zip?ids=$b,%20$c")->streamedContent());
+        $z = new ZipArchive();
+        $z->open($path);
+        $this->assertEqualsCanonicalizing([self::mp4(700), self::mp4(900)], [$z->getFromIndex(0), $z->getFromIndex(1)]);
+        $this->assertSame(2, $z->numFiles);
+        $z->close();
         $this->get('/downloads/videos.zip?ids=999999')->assertNotFound();
         $this->call('HEAD', '/downloads/videos.zip')->assertOk()->assertHeader('Content-Type', 'application/zip');
     }

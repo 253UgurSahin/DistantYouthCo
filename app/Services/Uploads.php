@@ -86,7 +86,7 @@ class Uploads
     /** Pieces left behind for a day are thrown away. */
     public function purgeStale(): void
     {
-        foreach (Upload::where('created_at', '<', now()->subDay())->get() as $old) {
+        foreach (Upload::where('updated_at', '<', now()->subDay())->get() as $old) {
             @unlink($old->partPath());
             $old->delete();
         }

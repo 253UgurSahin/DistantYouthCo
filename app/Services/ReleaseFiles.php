@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\ApiError;
 use App\Models\Release;
 use App\Models\Upload;
+use App\Support\Input;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -175,6 +176,18 @@ class ReleaseFiles
         return $has = $code === 0;
     }
 
+    /** Starts "php artisan studio:process <id>" on its own; false where that is not possible. */
+    public static function inBackground(int $releaseId): bool
+    {
+        $php = PHP_BINDIR.'/php';
+        if (! is_executable($php)) {
+            return false;
+        }
+        @exec(implode(' ', array_map('escapeshellarg', [$php, base_path('artisan'), 'studio:process', (string) $releaseId])).' > /dev/null 2>&1 &', $out, $code);
+
+        return $code === 0;
+    }
+
     private static function ffmpeg(array $args): bool
     {
         $code = 1;
@@ -208,7 +221,7 @@ class ReleaseFiles
         if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
             return;
         }
-        @set_time_limit(900);
+        Input::moreTime(900);
         $dir = $disk->path($release->directory());
         $wav = $release->filePath('wav');
         if ($wav && ! $release->mp3_file && self::ffmpeg(['-y', '-v', 'error', '-i', $wav, '-codec:a', 'libmp3lame', '-b:a', '320k', "$dir/audio.mp3"])) {

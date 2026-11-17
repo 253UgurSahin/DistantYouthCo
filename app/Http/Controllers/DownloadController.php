@@ -6,6 +6,7 @@ use App\Exceptions\ApiError;
 use App\Http\Resources\ReleaseResource;
 use App\Models\Release;
 use App\Services\ZipStream;
+use App\Support\Input;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -35,7 +36,7 @@ class DownloadController extends Controller
         // ids=1,2 or ids[]=1&ids[]=2; none: every video.
         $raw = $request->query('ids', '');
         $raw = is_array($raw) ? implode(',', array_filter($raw, 'is_string')) : (string) $raw;
-        $wanted = collect(explode(',', $raw))->map('trim')->filter(fn ($x) => preg_match('/^[1-9]\d*$/', $x))->map('intval')->flip();
+        $wanted = collect(explode(',', $raw))->map(fn ($x) => trim($x))->filter(fn ($x) => preg_match('/^[1-9]\d*$/', $x))->map(fn ($x) => (int) $x)->flip();
         $chosen = $this->withVideo($request)->filter(fn ($x) => $wanted->isEmpty() || $wanted->has($x['release']->id))->values();
         if ($chosen->isEmpty()) {
             throw ApiError::notFound("Geen video's om te downloaden.");
@@ -68,7 +69,7 @@ class DownloadController extends Controller
         }
 
         return response()->stream(function () use ($entries) {
-            @set_time_limit(0);
+            Input::moreTime(0);
             // Straight to the browser, not into a buffer the size of every video (tests read the buffer).
             while (! app()->runningUnitTests() && ob_get_level()) {
                 ob_end_clean();

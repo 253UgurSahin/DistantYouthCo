@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\ReleaseFiles;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
@@ -24,3 +25,8 @@ Artisan::command('studio:password {username : the account}', function (string $u
 
     return 0;
 })->purpose('Zet een nieuw wachtwoord voor een account');
+
+// Started by the app itself after an upload (where the answer cannot go first): the MP3 and the cover.
+Artisan::command('studio:process {id : the release}', function (string $id) {
+    app(ReleaseFiles::class)->heavyWork((int) $id);
+})->purpose('Maak de MP3 en cover van een release (ffmpeg)');

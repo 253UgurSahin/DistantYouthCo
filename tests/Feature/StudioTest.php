@@ -113,6 +113,8 @@ class StudioTest extends TestCase
 
         $this->actingAs($owner);
         $this->app_()->putJson("/api/playlists/$id", ['name' => 'Nacht', 'is_public' => true])->assertOk();
+        $b->update(['is_hidden' => true]); // hidden after it was added: not counted for listeners either
+        $this->assertSame(1, $this->getJson('/api/playlists')->json('playlists.0.count'));
         $this->actingAs($this->listener('derde'));
         $this->getJson("/api/playlists/$id")->assertOk();
         $this->app_()->deleteJson("/api/playlists/$id")->assertForbidden();

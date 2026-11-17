@@ -11,6 +11,8 @@ class Playlist extends Model
 {
     protected $fillable = ['user_id', 'name', 'description', 'is_public'];
 
+    protected $attributes = ['description' => ''];
+
     protected function casts(): array
     {
         return ['is_public' => 'boolean', 'user_id' => 'integer'];
