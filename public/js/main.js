@@ -90,6 +90,8 @@ async function route() {
   const id = ++renderId;
   depth?.destroy();
   depth = null;
+  // The sign-in page has no player bar, so no room is kept for one (it made the page scroll).
+  main.classList.toggle('bare', !session.user);
   if (!session.user) {
     clear(shell);
     main.replaceChildren(authView(session.needsSetup, (user) => {

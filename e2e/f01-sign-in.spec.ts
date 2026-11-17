@@ -50,3 +50,13 @@ test('F01-H4 the sign-in remembers who you are and shows the password on request
   await expect(page.getByLabel('Gebruikersnaam')).toHaveValue('');
 });
 
+test('F01-E1 the sign-in page fits the window: no scrolling, on a phone or a laptop', async ({ page }) => {
+  for (const size of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 390, height: 664 }]) {
+    await page.setViewportSize(size);
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: /Inloggen|Account aanmaken/ })).toBeVisible();
+    const extra = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+    expect(extra, `at ${size.width}x${size.height} the page scrolls ${extra}px`).toBeLessThanOrEqual(0);
+  }
+});
+
