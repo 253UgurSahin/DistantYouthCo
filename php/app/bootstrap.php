@@ -81,7 +81,11 @@ function is_https(): bool {
 }
 
 function client_ip(): string {
-    if (trust_proxy() && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+    // The proxy adds the address it saw at the end; anything before it the client could have written.
+    if (trust_proxy() && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $parts = explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR']);
+        return trim((string) end($parts));
+    }
     return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 }
 
@@ -202,10 +206,17 @@ function seal_key(): string {
     if ($secret !== '') return $key = hash('sha256', $secret, true);
     $file = data_dir() . '/secret.key';
     if (!is_file($file)) {
-        $f = @fopen($file, 'x');
-        if ($f) { fwrite($f, bin2hex(random_bytes(32))); fclose($f); @chmod($file, 0600); }
+        $tmp = $file . '.' . bin2hex(random_bytes(6));
+        $old = umask(0077);
+        file_put_contents($tmp, bin2hex(random_bytes(32)));
+        umask($old);
+        // link() fails when another request made the key first: then that one counts.
+        if (!@link($tmp, $file) && !is_file($file)) @rename($tmp, $file);
+        @unlink($tmp);
     }
-    return $key = (string) hex2bin(trim((string) file_get_contents($file)));
+    $raw = @hex2bin(trim((string) @file_get_contents($file)));
+    if (!is_string($raw) || strlen($raw) !== 32) throw new HttpError(500, 'De sleutel in data/secret.key is beschadigd. Zet hem terug uit je back-up.');
+    return $key = $raw;
 }
 
 function seal(string $text): string {
@@ -263,8 +274,13 @@ function validate_credentials($username, $password): ?string {
     return null;
 }
 
-function hash_password(string $p): string { return password_hash($p, PASSWORD_DEFAULT); }
-function verify_password(string $p, string $stored): bool { return password_verify($p, $stored); }
+// Hashed after SHA-256, so bcrypt never cuts a long password at 72 bytes. An account copied from the
+// Node.js version (scrypt$...) cannot be read here: see LEESMIJ.txt ("Verhuizen").
+function pw_prep(string $p): string { return base64_encode(hash('sha256', $p, true)); }
+function hash_password(string $p): string {
+    return password_hash(pw_prep($p), defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT);
+}
+function verify_password(string $p, string $stored): bool { return password_verify(pw_prep($p), $stored); }
 
 function session_cookie(string $value, int $expires): void {
     setcookie(DYC_COOKIE, $value, [

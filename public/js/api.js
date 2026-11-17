@@ -78,19 +78,20 @@ function sendChunk(url, blob, onProgress) {
 export async function uploadInChunks(file, chunkSize, onProgress) {
   const { token } = await api('/uploads', { method: 'POST', body: { name: file.name, size: file.size } });
   let offset = 0;
+  let tries = 0;
   while (offset < file.size) {
-    const piece = file.slice(offset, Math.min(file.size, offset + chunkSize));
-    let tries = 0;
-    for (;;) {
-      try {
-        const res = await sendChunk(`/api/uploads/${token}?offset=${offset}`, piece, (p) => onProgress?.((offset + p * piece.size) / file.size));
-        offset = res.received;
-        break;
-      } catch (e) {
-        if (++tries >= 4 || (e.status >= 400 && e.status < 500 && e.status !== 409)) throw e;
-        await new Promise((r) => setTimeout(r, 800 * tries));
-        if (e.status === 409) offset = (await api(`/uploads/${token}`)).received;
-      }
+    // Cut each time from where the server is, also after a retry.
+    const at = offset;
+    const piece = file.slice(at, Math.min(file.size, at + chunkSize));
+    try {
+      const res = await sendChunk(`/api/uploads/${token}?offset=${at}`, piece, (p) => onProgress?.((at + p * piece.size) / file.size));
+      if (!(res?.received > at)) throw new ApiError(502, 'De server nam dit stuk niet aan.');
+      offset = res.received;
+      tries = 0;
+    } catch (e) {
+      if (++tries >= 4 || (e.status >= 400 && e.status < 500 && e.status !== 409)) throw e;
+      await new Promise((r) => setTimeout(r, 800 * tries));
+      offset = (await api(`/uploads/${token}`)).received;
     }
     onProgress?.(offset / file.size);
   }

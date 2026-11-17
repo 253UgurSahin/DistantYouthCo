@@ -94,8 +94,11 @@ function form_files(): array {
         $token = $_POST[$kind . '_upload'] ?? '';
         if (is_string($token) && $token !== '') {
             $row = upload_row($token);
-            if ((int) $row['received'] !== (int) $row['size']) throw bad("{$row['name']} is nog niet helemaal geüpload.");
             $path = part_path($token);
+            clearstatcache(true, $path);
+            if ((int) $row['received'] !== (int) $row['size'] || !is_file($path) || filesize($path) !== (int) $row['size']) {
+                throw bad("{$row['name']} is nog niet helemaal geüpload.");
+            }
             $ext = sniff($kind, $path);
             if (!$ext) throw bad("{$row['name']} is geen geldig " . KIND_LABEL[$kind] . '-bestand.');
             $found[$kind] = ['path' => $path, 'ext' => $ext, 'token' => $token];
@@ -180,6 +183,9 @@ function process_release(int $id, bool $heavy): void {
         if ($d) q('UPDATE releases SET duration = ? WHERE id = ?', [$d, $id]);
     }
     if (!$heavy || !has_ffmpeg()) return;
+    // One conversion per release at a time (two saves in a row must not both run ffmpeg).
+    $lock = fopen(release_dir($id) . '/.processing', 'c');
+    if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) return;
     @set_time_limit(900);
     $dir = release_dir($id);
     if ($wav && !$r['mp3_file'] && run_ffmpeg(['-y', '-v', 'error', '-i', $wav, '-codec:a', 'libmp3lame', '-b:a', '320k', "$dir/audio.mp3"])) {
@@ -194,6 +200,8 @@ function process_release(int $id, bool $heavy): void {
         if ($ok) q('UPDATE releases SET cover_file = ?, cover_generated = 1 WHERE id = ?', ['cover.jpg', $id]);
     }
     q("UPDATE releases SET updated_at = datetime('now') WHERE id = ?", [$id]);
+    flock($lock, LOCK_UN);
+    fclose($lock);
 }
 
 /** Sends a stored file, with ranges (seeking in the player) and as a download when asked. */
@@ -214,15 +222,19 @@ function send_file(string $path, string $downloadName = ''): void {
     $end = $size - 1;
     $range = $_SERVER['HTTP_RANGE'] ?? '';
     if ($range !== '' && preg_match('/^bytes=(\d*)-(\d*)$/', trim($range), $m) && ($m[1] !== '' || $m[2] !== '')) {
+        $ignore = $m[1] !== '' && $m[2] !== '' && (int) $m[2] < (int) $m[1];
         if ($m[1] === '') { $start = max(0, $size - (int) $m[2]); }
-        else { $start = (int) $m[1]; if ($m[2] !== '') $end = min($end, (int) $m[2]); }
-        if ($start > $end || $start >= $size) {
+        else { $start = (int) $m[1]; if ($m[2] !== '' && !$ignore) $end = min($end, (int) $m[2]); }
+        if ($ignore) { $start = 0; $end = $size - 1; }
+        elseif ($start > $end || $start >= $size) {
             http_response_code(416);
             header("Content-Range: bytes */$size");
             return;
         }
-        http_response_code(206);
-        header("Content-Range: bytes $start-$end/$size");
+        if (!$ignore) {
+            http_response_code(206);
+            header("Content-Range: bytes $start-$end/$size");
+        }
     }
     header('Content-Length: ' . ($end - $start + 1));
     if ($_SERVER['REQUEST_METHOD'] === 'HEAD') return;

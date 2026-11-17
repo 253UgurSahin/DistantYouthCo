@@ -148,6 +148,19 @@ test('a release from pieces: wrong order refused, a piece sent twice is not writ
   assert.deepEqual(fs.readdirSync(path.join(dataDir, 'uploads', 'tmp')), [], 'no pieces left behind');
 });
 
+test('a piece is written exactly once, even after a write that half failed; an empty piece is refused', { skip }, async () => {
+  const buf = crypto.randomBytes(5000);
+  const { body } = await admin.req('POST', '/api/uploads', { name: 'x.mp4', size: buf.length });
+  const t = body.token;
+  const send = (o, b) => admin.req('POST', `/api/uploads/${t}?offset=${o}`, b, { headers: { 'Content-Type': 'application/octet-stream' } });
+  assert.equal((await send(0, Buffer.alloc(0))).status, 400);
+  assert.equal((await send(0, buf.subarray(0, 2000))).body.received, 2000);
+  // Bytes on disk that were never counted (a write cut off before the database heard of it).
+  fs.appendFileSync(path.join(dataDir, 'uploads', 'tmp', `${t}.part`), Buffer.from('garbage'));
+  assert.equal((await send(2000, buf.subarray(2000))).body.received, 5000);
+  assert.ok(fs.readFileSync(path.join(dataDir, 'uploads', 'tmp', `${t}.part`)).equals(buf), 'the file is exactly what was sent');
+});
+
 test('a file over this host\'s limit in one go gets a clear 413; a fake WAV is refused', { skip }, async () => {
   const fd = new FormData();
   fd.append('title', 'Te groot');
@@ -181,6 +194,8 @@ test('media: ranges for seeking, a download name, nothing outside the release', 
   assert.equal(r.status, 206);
   assert.equal(r.headers.get('content-range'), `bytes 0-99/${wav(200).length}`);
   assert.equal((await r.arrayBuffer()).byteLength, 100);
+  const odd = await listener.req('GET', `/media/${releaseId}/audio`, undefined, { raw: true, headers: { Range: 'bytes=10-5' } });
+  assert.equal(odd.status, 200, 'an impossible range is ignored');
   const d = await admin.req('GET', `/media/${releaseId}/video?download=1`, undefined, { raw: true });
   assert.match(d.headers.get('content-disposition'), /lanterns-in-the-rain-video\.mp4/);
   assert.equal((await admin.req('GET', `/media/${releaseId}/..%2f..%2fdistantyouth.db`, undefined, { raw: true })).status, 404);

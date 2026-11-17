@@ -43,6 +43,11 @@ Back-up
 - Alles staat in distantyouth/data: de database (distantyouth.db), secret.key en de map
   uploads met je muziek en video's. Bewaar die map.
 
+Verhuizen vanaf de Node.js-versie
+- Releases en bestanden kunnen mee (kopieer de map data naar distantyouth/data), maar de
+  wachtwoorden niet: die zijn op een andere manier versleuteld. Begin daarom op je host met
+  een nieuwe installatie, of vraag om een hulpje dat de accounts opnieuw instelt.
+
 Bijwerken naar een nieuwe versie
 - Vervang public_html en distantyouth/app door die uit de nieuwe ZIP.
   Laat distantyouth/data en config.php staan.

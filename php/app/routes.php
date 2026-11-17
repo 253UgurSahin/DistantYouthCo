@@ -29,12 +29,11 @@ function release_fields(array $b, ?array $existing): array {
 
 /** Ends the response, then does slow work (an MP3 with ffmpeg) where the host allows it. */
 function respond_then(callable $after): void {
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-        $after(true);
-    } else {
-        $after(false);
-    }
+    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+    elseif (function_exists('litespeed_finish_request')) litespeed_finish_request();
+    else return; // the answer cannot be closed first here: no slow work that keeps the browser waiting
+    ignore_user_abort(true);
+    $after(true);
 }
 
 function load_playlist(int $id, array $user): array {
@@ -179,25 +178,42 @@ function routes(): array {
             $offset = $_GET['offset'] ?? '';
             if (!is_string($offset) || !preg_match('/^\d+$/', $offset)) throw bad('Ongeldige positie.');
             $offset = (int) $offset;
-            $received = (int) $r['received'];
-            // A piece sent twice (a retry after a lost answer) is not written again.
-            if ($offset < $received) { send_json(['received' => $received]); return; }
-            if ($offset > $received) throw new HttpError(409, 'Dit stuk sluit niet aan; de upload gaat verder waar hij was.');
-            $in = fopen('php://input', 'rb');
-            $outF = fopen(part_path($p[1]), 'ab');
-            $n = 0;
-            $max = (int) $r['size'] - $received;
-            while (!feof($in)) {
-                $buf = fread($in, 1048576);
-                if ($buf === false || $buf === '') break;
-                $n += strlen($buf);
-                if ($n > $max) { fclose($in); fclose($outF); ftruncate(fopen(part_path($p[1]), 'r+b'), $received); throw bad('Er kwam meer binnen dan het bestand groot is.'); }
-                fwrite($outF, $buf);
+            // A piece sent twice (a retry after a lost answer) is not written again; see below.
+            // One writer per file at a time; what is on disk is the truth, not the counter alone.
+            $part = fopen(part_path($p[1]), 'c+b');
+            if (!$part || !flock($part, LOCK_EX)) throw new HttpError(503, 'De upload is even bezet. Probeer opnieuw.');
+            try {
+                clearstatcache(true, part_path($p[1]));
+                $r = upload_row($p[1]);
+                $received = (int) $r['received'];
+                $onDisk = (int) fstat($part)['size'];
+                if ($onDisk !== $received) { ftruncate($part, $received); } // a write that never got counted
+                if ($offset < $received) { send_json(['received' => $received]); return; }
+                if ($offset > $received) throw new HttpError(409, 'Dit stuk sluit niet aan; de upload gaat verder waar hij was.');
+                fseek($part, $received);
+                $in = fopen('php://input', 'rb');
+                $n = 0;
+                $max = (int) $r['size'] - $received;
+                while (!feof($in)) {
+                    $buf = fread($in, 1048576);
+                    if ($buf === false || $buf === '') break;
+                    $n += strlen($buf);
+                    if ($n > $max) { ftruncate($part, $received); throw bad('Er kwam meer binnen dan het bestand groot is.'); }
+                    $w = fwrite($part, $buf);
+                    if ($w !== strlen($buf)) {
+                        ftruncate($part, $received);
+                        throw new HttpError(507, 'De server kon het stuk niet opslaan (is de schijfruimte op?).');
+                    }
+                }
+                fclose($in);
+                if ($n === 0) throw bad('Dit stuk was leeg.');
+                fflush($part);
+                q('UPDATE uploads SET received = ? WHERE token = ?', [$received + $n, $p[1]]);
+                send_json(['received' => $received + $n]);
+            } finally {
+                flock($part, LOCK_UN);
+                fclose($part);
             }
-            fclose($in);
-            fclose($outF);
-            q('UPDATE uploads SET received = ? WHERE token = ?', [$received + $n, $p[1]]);
-            send_json(['received' => $received + $n]);
         }],
 
         // releases
