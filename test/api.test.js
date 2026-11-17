@@ -72,6 +72,14 @@ test('first visit asks for the admin; setup works once', async () => {
   assert.equal((await new Client().req('POST', '/api/setup', { username: 'evil', password: PW.admin })).status, 403, 'no second setup');
 });
 
+test('the app tells its version as major.minor.patch, the one in package.json', async () => {
+  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+  const s = await new Client().req('GET', '/api/session');
+  assert.equal(s.body.version, pkg.version);
+  assert.match(fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'), new RegExp(`^## ${pkg.version.replaceAll('.', '\\.')} `, 'm'), 'CHANGELOG.md has this version');
+});
+
 test('state-changing calls need the app header (CSRF guard)', async () => {
   const r = await admin.req('POST', '/api/folders', { name: 'X' }, { ajax: false });
   assert.equal(r.status, 403);
@@ -232,6 +240,12 @@ test('downloads: the admin gets every video, one by one or as one ZIP; a listene
   assert.equal(buf.readUInt32LE(0), 0x04034b50, 'starts as a ZIP');
   assert.ok(buf.includes(Buffer.from('Night Video one (Official Visualizer).mp4')), 'named after the release, safe for any computer');
   assert.ok(buf.includes(mp4), 'holds the video as it is');
+  const two = await admin.req('GET', `/downloads/videos.zip?ids=${v.id}&ids=999999`, undefined, { raw: true });
+  assert.equal(two.status, 200, 'ids may also come as a repeated parameter');
+  assert.ok(Buffer.from(await two.arrayBuffer()).includes(Buffer.from('Night Video one')));
+  const head = await admin.req('HEAD', '/downloads/videos.zip', undefined, { raw: true });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers.get('content-type'), 'application/zip');
   assert.equal((await listener.req('GET', '/api/downloads')).status, 403);
   assert.equal((await listener.req('GET', '/downloads/videos.zip', undefined, { raw: true })).status, 403);
   assert.equal((await admin.req('GET', '/downloads/videos.zip?ids=999999', undefined, { raw: true })).status, 404);

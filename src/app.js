@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
-import { ROOT_DIR, MAX_UPLOAD_MB } from './config.js';
+import { ROOT_DIR, MAX_UPLOAD_MB, VERSION } from './config.js';
 import { db, getSettings, saveSettings, tx, DEFAULT_SETTINGS } from './db.js';
 import {
   hashPassword, verifyPassword, validateCredentials, createSession, destroySession, sessionMiddleware,
@@ -17,7 +17,7 @@ import { generateYoutubeKit, extractBpm, LIMITS, claudeConfigured } from './yout
 import { suggestNames } from './albumnames.js';
 import { computeStats, PERIODS } from './stats.js';
 import { ClaudeError } from './claude.js';
-import { writeZip, safeName } from './zip.js';
+import { writeZip, safeName, MAX32 } from './zip.js';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -113,7 +113,7 @@ export function createApp() {
   const userCount = () => db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
 
   app.get('/api/session', (req, res) => {
-    res.json({ user: req.user || null, needsSetup: userCount() === 0 });
+    res.json({ user: req.user || null, needsSetup: userCount() === 0, version: VERSION });
   });
 
   app.post('/api/setup', loginRateLimit, (req, res) => {
@@ -412,11 +412,14 @@ export function createApp() {
 
   app.get('/downloads/videos.zip', requireAdmin, async (req, res) => {
     const all = releasesWithVideo(req.user);
-    const wanted = typeof req.query.ids === 'string' && req.query.ids
-      ? new Set(req.query.ids.split(',').map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0))
-      : null;
+    // ids=1,2 or ids=1&ids=2; none: every video.
+    const raw = [].concat(req.query.ids ?? []).join(',');
+    const wanted = raw ? new Set(raw.split(',').map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0)) : null;
     const chosen = wanted ? all.filter(({ r }) => wanted.has(r.id)) : all;
     if (!chosen.length) throw notFound('Geen video\'s om te downloaden.');
+    // Checked before anything is sent, so a too large file gets a clear answer, not a broken archive.
+    const tooBig = chosen.find(({ file }) => fs.statSync(file).size >= MAX32);
+    if (tooBig) throw new HttpError(413, `De video van ${tooBig.r.title} is 4 GB of groter: download die los met zijn eigen MP4-knop.`);
     const used = new Set();
     const entries = chosen.map(({ r, file }) => {
       const base = safeName(`${r.title} (${r.video_type || 'Video'})`);
@@ -431,6 +434,7 @@ export function createApp() {
       'Content-Disposition': `attachment; filename="distant-youth-videos-${day}.zip"`,
       'Cache-Control': 'no-store',
     });
+    if (req.method === 'HEAD') return res.end(); // a link checker or download manager asking: no files read
     try {
       await writeZip(res, entries);
     } catch (e) {

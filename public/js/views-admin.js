@@ -509,6 +509,8 @@ export function authView(setup, onDone) {
   const btn = el('button', { type: 'submit', class: 'btn primary lg auth-go' }, setup ? 'Account aanmaken' : 'Inloggen');
   const submit = async (e) => {
     e.preventDefault();
+    // A password manager offers to save only a password field: hide what was typed again first.
+    if (pass.type !== 'password') eye.click();
     err.replaceChildren();
     btn.disabled = true;
     btn.setAttribute('aria-busy', 'true');
@@ -529,6 +531,7 @@ export function authView(setup, onDone) {
     notMe.remove();
     user.focus();
   } }, `Niet ${last}?`) : null;
+  if (notMe) user.addEventListener('input', () => { notMe.hidden = user.value.trim().toLowerCase() !== last.toLowerCase(); });
   // Focus where you start typing: the password when the name is already there.
   setTimeout(() => (user.value ? pass : user).focus(), 60);
   return el('div', { class: 'auth-page' },
@@ -543,7 +546,8 @@ export function authView(setup, onDone) {
         el('div', { class: 'pass-wrap' }, pass, eye),
         setup ? el('div', { class: 'hint' }, 'Minstens 8 tekens.') : null),
       err, btn,
-      el('p', { class: 'xs muted auth-foot' }, 'Je blijft 30 dagen ingelogd op dit apparaat.', notMe ? ' ' : null, notMe)));
+      el('p', { class: 'xs muted auth-foot' }, 'Je blijft 30 dagen ingelogd op dit apparaat.', notMe ? ' ' : null, notMe),
+      session.version ? el('p', { class: 'xs faint auth-foot' }, `Versie ${session.version}`) : null));
 }
 
 export { coverEl, YT_WORDS };

@@ -1,12 +1,11 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
-import { once } from 'node:events';
 
 // Streams a ZIP of files that already sit on disk, without packing it in memory first. The files are
 // stored as they are (MP4 does not compress any further), each followed by a data descriptor with
 // its CRC. ZIP64 records are written only when an offset or the count goes past the classic limits,
 // so a folder of large videos of more than 4 GB together still opens everywhere.
-const MAX32 = 0xffffffff;
+export const MAX32 = 0xffffffff;
 
 function dosTime(d) {
   const time = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
@@ -25,10 +24,17 @@ export async function writeZip(out, entries, { limit = MAX32 } = {}) {
   let offset = 0;
   let gone = false;
   out.once('close', () => { gone = true; });
+  // Wait for room in the reader's buffer, or for the reader to leave; both listeners go again after,
+  // so a slow download of many gigabytes does not pile up listeners.
+  const room = () => new Promise((resolve) => {
+    const done = () => { out.off('drain', done); out.off('close', done); resolve(); };
+    out.on('drain', done);
+    out.on('close', done);
+  });
   const write = async (buf) => {
     if (gone) return;
     offset += buf.length;
-    if (!out.write(buf)) await Promise.race([once(out, 'drain'), once(out, 'close')]);
+    if (!out.write(buf)) await room();
   };
 
   for (const e of entries) {

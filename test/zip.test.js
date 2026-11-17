@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { PassThrough } from 'node:stream';
+import { PassThrough, Writable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
 import { writeZip, safeName } from '../src/zip.js';
 
@@ -72,3 +72,24 @@ test('names inside the archive lose path parts and troublesome characters', () =
   assert.equal(safeName('../a/b: "c"?'), '.. a b c');
   assert.equal(safeName(''), 'video');
 });
+
+test('a slow reader does not pile up listeners while a big file streams', async () => {
+  const big = path.join(dir, 'big.mp4');
+  fs.writeFileSync(big, Buffer.alloc(3 * 1024 * 1024, 3));
+  let most = 0;
+  const out = new Writable({
+    highWaterMark: 1024,
+    write(chunk, enc, cb) {
+      most = Math.max(most, this.listenerCount('close'), this.listenerCount('drain'));
+      setImmediate(cb);
+    },
+  });
+  const warnings = [];
+  const onWarn = (w) => warnings.push(w.name);
+  process.on('warning', onWarn);
+  assert.equal(await writeZip(out, [{ name: 'big.mp4', path: big }]), true);
+  process.off('warning', onWarn);
+  assert.ok(most <= 3, `at most a few listeners at a time (saw ${most})`);
+  assert.ok(!warnings.includes('MaxListenersExceededWarning'));
+});
+

@@ -35,7 +35,8 @@ export async function downloadsView() {
     const picked = vis.filter((v) => chosen.has(v.id));
     const bytes = picked.reduce((n, v) => n + v.video_size, 0);
     summary.textContent = picked.length ? `${picked.length} van ${vis.length} gekozen · ${size(bytes)}` : 'Niets gekozen';
-    all.checked = picked.length === vis.length;
+    all.checked = vis.length > 0 && picked.length === vis.length;
+    all.disabled = vis.length === 0;
     all.indeterminate = picked.length > 0 && picked.length < vis.length;
     if (picked.length) {
       zipBtn.href = `/downloads/videos.zip?ids=${picked.map((v) => v.id).join(',')}`;
