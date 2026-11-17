@@ -251,6 +251,13 @@ test('downloads: the admin gets every video, one by one or as one ZIP; a listene
   assert.equal((await admin.req('GET', '/downloads/videos.zip?ids=999999', undefined, { raw: true })).status, 404);
 });
 
+test('a POST with X-HTTP-Method-Override acts as that method (for hosts that block PUT and DELETE)', async () => {
+  const f = await admin.req('POST', '/api/folders', { name: 'Tijdelijk' });
+  const res = await fetch(`${base}/api/folders/${f.body.folder.id}`, { method: 'POST', headers: { 'X-Requested-With': 'dyc', 'X-HTTP-Method-Override': 'DELETE', Cookie: admin.cookie } });
+  assert.equal(res.status, 200);
+  assert.equal((await admin.req('GET', `/api/folders/${f.body.folder.id}`)).status, 404);
+});
+
 test('deleting a release removes its files', async () => {
   assert.equal((await admin.req('DELETE', `/api/releases/${hiddenId}`)).status, 200);
   assert.equal(fs.existsSync(path.join(dataDir, 'uploads', 'releases', String(hiddenId))), false);

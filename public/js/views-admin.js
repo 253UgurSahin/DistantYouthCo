@@ -1,5 +1,5 @@
 import { el, icon, moon, parseLyrics, styleFacts, toast, confirmDialog, formDialog, copyText, YT_WORDS } from './dom.js';
-import { api, upload } from './api.js';
+import { api, upload, uploadInChunks } from './api.js';
 import { session, isAdmin } from './session.js';
 import { coverEl } from './parts.js';
 
@@ -132,14 +132,25 @@ export async function editView(id) {
     fd.append('hidden', hidden.checked ? '1' : '0');
     fd.append('notes', notes.value);
     for (const k of Object.keys(removed)) fd.append(`remove_${k}`, '1');
-    for (const [k, f] of Object.entries(files)) fd.append(k, f);
     for (const b of buttons.querySelectorAll('button')) b.disabled = true;
     const showBars = Object.keys(files).length > 0;
     for (const b of bars) b.hidden = !showBars;
+    const setBars = (p) => { for (const b of bars) b.firstChild.style.width = `${Math.round(p * 100)}%`; };
     try {
-      const res = await upload(id ? `/releases/${id}` : '/releases', id ? 'PUT' : 'POST', fd, (p) => {
-        for (const b of bars) b.firstChild.style.width = `${Math.round(p * 100)}%`;
-      });
+      if (session.uploadChunk) {
+        // A host with a small upload limit: every file goes up in pieces first, the form then names them.
+        const list = Object.entries(files);
+        const total = list.reduce((n, [, f]) => n + f.size, 0) || 1;
+        let done = 0;
+        for (const [k, f] of list) {
+          const token = await uploadInChunks(f, session.uploadChunk, (p) => setBars((done + p * f.size) / total));
+          done += f.size;
+          fd.append(`${k}_upload`, token);
+        }
+      } else {
+        for (const [k, f] of Object.entries(files)) fd.append(k, f);
+      }
+      const res = await upload(id ? `/releases/${id}` : '/releases', id ? 'PUT' : 'POST', fd, session.uploadChunk ? null : setBars);
       toast(id ? 'Opgeslagen' : 'Release aangemaakt');
       location.hash = thenKit ? `#/release/${res.release.id}/youtube?generate=1` : `#/release/${res.release.id}`;
     } catch (e) {

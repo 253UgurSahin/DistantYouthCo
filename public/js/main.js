@@ -143,6 +143,7 @@ player.onChange(() => {
     session.user = s.user;
     session.needsSetup = s.needsSetup;
     session.version = s.version || '';
+    session.uploadChunk = s.upload_chunk || 0; // set by a server with a small upload limit
   } catch {
     main.replaceChildren(errorPage({ message: 'Kan de server niet bereiken.' }));
     return;

@@ -100,6 +100,12 @@ export function createApp() {
     app.use(`/fonts/${name}`, express.static(path.join(ROOT_DIR, 'node_modules', '@fontsource-variable', name), { index: false, maxAge: '30d' }));
   }
 
+  // Shared hosts often pass only GET and POST: the app sends other methods as a POST that names them.
+  app.use('/api', (req, _res, next) => {
+    const real = String(req.get('X-HTTP-Method-Override') || '').toUpperCase();
+    if (req.method === 'POST' && ['PUT', 'PATCH', 'DELETE'].includes(real)) req.method = real;
+    next();
+  });
   app.use(sessionMiddleware);
   app.use('/api', requireAjaxHeader);
   app.use('/api', express.json({ limit: '1mb' }));

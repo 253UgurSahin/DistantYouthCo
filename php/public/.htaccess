@@ -1,0 +1,45 @@
+# Distant Youth Studio on Apache / LiteSpeed (shared hosting)
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # The app's server part: everything under /api, /media and /downloads goes to index.php.
+  RewriteRule ^(api|media|downloads)(/.*)?$ index.php [L,QSA]
+  # Keep the Authorization header (some hosts drop it otherwise).
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# No hidden files (.htaccess, .env, .git) and no PHP other than index.php.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.php$">
+  Require all denied
+</FilesMatch>
+<Files "index.php">
+  Require all granted
+</Files>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  # The app's own files are checked again on every load, so an update shows at once.
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType font/woff2 .woff2
+</IfModule>
+
+# Room for large pieces of an upload and slow phones (only where the host allows it).
+<IfModule mod_php.c>
+  php_value upload_max_filesize 64M
+  php_value post_max_size 64M
+  php_value max_execution_time 300
+</IfModule>

@@ -13,5 +13,13 @@ Bij elke versie, in één commit `release: vX.Y.Z`:
 
 De app toont de versie (`/api/session` geeft `version`, uit `package.json` via `src/config.js`).
 
+## Twee servers, één app
+De schermen (`public/`) praten met een van twee servers met precies dezelfde API:
+- `src/` in Node.js (Docker, een VPS, lokaal);
+- `php/` in PHP 8.1+ voor shared hosting (de gebruiker host zo). `npm run build:shared-host` maakt `dist/shared-host/` en de ZIP om te uploaden.
+Elke wijziging aan de API gaat in beide, met dezelfde paden, antwoorden en meldingen.
+
 ## Controleren voor een versie
-`npm test`, de end-to-end tests (`cd e2e && npx playwright test --project=chromium`) en de wandeling langs alle schermen moeten slagen.
+- `npm test` (Node) en `npm run test:php` (PHP, met de limieten van een shared host);
+- de end-to-end tests (`cd e2e && npx playwright test --project=chromium`) tegen beide servers;
+- de wandeling langs alle schermen.

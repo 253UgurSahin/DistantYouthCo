@@ -16,7 +16,8 @@ test('F02-H1 admin uploads a release with WAV and video, and lands on its page',
   await page.locator('#file-video').setInputFiles(`${ASSETS}/visualizer.mp4`);
   await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-  await expect(page.getByText('Distant Youth Co. · 150 BPM')).toBeVisible();
+  // The duration shows at once where the server reads it from the WAV (PHP), a moment later otherwise (Node with ffmpeg).
+  await expect(page.getByText(/^Distant Youth Co\. · (\d+:\d\d · )?150 BPM$/)).toBeVisible();
 });
 
 test('F02-N1 a file that is not a WAV is refused with a clear message', async ({ page }) => {

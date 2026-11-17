@@ -8,6 +8,15 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in `package.json`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 1.3.0 (2026-11-17)
+Nieuw
+- Een PHP-versie voor shared hosting, waar Node.js niet kan draaien: dezelfde app en dezelfde schermen. `npm run build:shared-host` maakt een ZIP met `public_html` en `distantyouth` en een LEESMIJ met de stappen.
+- Grote WAV- en MP4-bestanden gaan in stukjes van een paar MB naar de server, als de server daarom vraagt. Zo maakt de uploadlimiet van een host niet uit, en een weggevallen verbinding gaat verder waar hij was.
+- De PHP-versie leest de duur van een WAV zelf, ook zonder ffmpeg.
+
+Beter
+- Wijzigen en verwijderen gaan als gewone POST met een extra kenmerk, zodat ook hosts die PUT en DELETE blokkeren werken.
+
 ## 1.2.1 (2026-11-17)
 Reparaties
 - Het inlogscherm scrolde een stukje (er werd ruimte vrijgehouden voor de muziekspeler, die daar niet is). Het past nu precies in het venster, ook op een telefoon.

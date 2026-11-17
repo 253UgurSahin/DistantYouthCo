@@ -21,6 +21,21 @@ Spotify staat; releases ordenen in collecties en playlists, en Claude een albumn
 - **Accounts**: jij bent admin. Luisteraars kunnen alleen luisteren en eigen playlists maken; releases
   die je als concept markeert zien zij niet.
 
+## Op shared hosting (PHP)
+
+Kan je host geen Node.js draaien, gebruik dan de PHP-versie: dezelfde app, dezelfde schermen.
+Nodig: PHP 8.1 of nieuwer met pdo_sqlite, openssl en curl (bijna altijd aanwezig).
+
+```bash
+npm ci
+npm run build:shared-host
+```
+
+Dat maakt `dist/distantyouth-shared-host-vX.Y.Z.zip`. Pak die uit en volg `LEESMIJ.txt`: de inhoud van
+`public_html` gaat in de webmap van je (sub)domein, de map `distantyouth` ernaast. Grote WAV- en
+MP4-bestanden gaan in stukjes naar de server, dus de uploadlimiet van je host maakt niet uit.
+Zonder ffmpeg (meestal op shared hosting) komt er geen automatische MP3 en cover: upload die zelf.
+
 ## Starten met Docker (aanbevolen)
 
 ```bash

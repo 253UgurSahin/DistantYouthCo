@@ -19,11 +19,16 @@ async function parse(res) {
   return body;
 }
 
+// Many shared hosts let only GET and POST through. Other methods go as a POST that names the real one;
+// both servers (Node and PHP) read X-HTTP-Method-Override.
+const wire = (method) => (method === 'GET' || method === 'POST' ? { method, extra: {} } : { method: 'POST', extra: { 'X-HTTP-Method-Override': method } });
+
 export async function api(path, { method = 'GET', body } = {}) {
+  const w = wire(method);
   const res = await fetch(`/api${path}`, {
-    method,
+    method: w.method,
     credentials: 'same-origin',
-    headers: { 'X-Requested-With': 'dyc', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { 'X-Requested-With': 'dyc', ...w.extra, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   return parse(res);
@@ -33,8 +38,10 @@ export async function api(path, { method = 'GET', body } = {}) {
 export function upload(path, method, formData, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open(method, `/api${path}`);
+    const w = wire(method);
+    xhr.open(w.method, `/api${path}`);
     xhr.setRequestHeader('X-Requested-With', 'dyc');
+    for (const [k, v] of Object.entries(w.extra)) xhr.setRequestHeader(k, v);
     xhr.responseType = 'json';
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(e.loaded / e.total);
@@ -47,3 +54,46 @@ export function upload(path, method, formData, onProgress) {
     xhr.send(formData);
   });
 }
+
+/** One raw chunk to the server, with progress of that chunk (0..1). */
+function sendChunk(url, blob, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('X-Requested-With', 'dyc');
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.response) : reject(new ApiError(xhr.status, xhr.response?.error || `Upload mislukt (${xhr.status}).`)));
+    xhr.onerror = () => reject(new ApiError(0, 'Geen verbinding met de server.'));
+    xhr.send(blob);
+  });
+}
+
+/**
+ * A large file in pieces, for a server with a small upload limit (shared hosting). Returns a token
+ * that the release form sends instead of the file. A piece that fails is tried again a few times,
+ * and the server says how much it has, so a dropped connection resumes instead of starting over.
+ */
+export async function uploadInChunks(file, chunkSize, onProgress) {
+  const { token } = await api('/uploads', { method: 'POST', body: { name: file.name, size: file.size } });
+  let offset = 0;
+  while (offset < file.size) {
+    const piece = file.slice(offset, Math.min(file.size, offset + chunkSize));
+    let tries = 0;
+    for (;;) {
+      try {
+        const res = await sendChunk(`/api/uploads/${token}?offset=${offset}`, piece, (p) => onProgress?.((offset + p * piece.size) / file.size));
+        offset = res.received;
+        break;
+      } catch (e) {
+        if (++tries >= 4 || (e.status >= 400 && e.status < 500 && e.status !== 409)) throw e;
+        await new Promise((r) => setTimeout(r, 800 * tries));
+        if (e.status === 409) offset = (await api(`/uploads/${token}`)).received;
+      }
+    }
+    onProgress?.(offset / file.size);
+  }
+  return token;
+}
+
