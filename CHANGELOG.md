@@ -8,6 +8,17 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in het bestand `VERSION`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 2.2.0 (2026-11-17)
+Nieuw
+- De YouTube-titel, -beschrijving en -tags staan meteen klaar als je een release opslaat (met het template). Pas je daarna titel, style of lyrics aan, dan gaat de tekst vanzelf mee, tot je hem zelf wijzigt. Releases van vóór deze versie krijgen hun tekst bij de update. Claude kan de tekst in de YouTube-kit nog altijd herschrijven.
+- In de YouTube-kit wordt alles wat je aanpast vanzelf bewaard. De link van je video plakken is genoeg om hem als "op YouTube" te markeren.
+- Het releaseformulier haalt de titel uit de naam van je WAV. Sleep je meerdere bestanden tegelijk erin, dan gaat elk naar zijn eigen vak. Je laatste collectie en video-type worden onthouden.
+
+Beter
+- Niets meer dubbel: één opslaanknop, de tags één keer in de YouTube-kit, één zijkaart in plaats van twee, en geen tweede statusregel op de telefoon.
+- Bestaat een release al, dan zegt het formulier dat (met een link ernaar). Bij meerdere tegelijk wordt die release standaard overgeslagen; met "Toch uploaden" komt hij er alsnog bij.
+- Beter contrast in licht en donker: duidelijkere randen, lichtere grijze tekst, invulvelden met een eigen kleur en panelen die loskomen van de achtergrond.
+
 ## 2.1.0 (2026-11-17)
 Nieuw
 - Meerdere releases tegelijk uploaden (Nieuwe release → "Meerdere releases tegelijk"): sleep al je bestanden in één keer erin. Elke WAV wordt een release; een MP4, MP3 of cover met dezelfde naam gaat er vanzelf bij. De titels komen uit de bestandsnamen en kun je nog aanpassen; collectie, video-type en concept stel je voor allemaal tegelijk in. Gaat er één mis, dan gaan de andere gewoon door.
