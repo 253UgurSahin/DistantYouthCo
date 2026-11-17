@@ -212,6 +212,31 @@ test('security headers are set', async () => {
   assert.equal(res.headers.get('x-frame-options'), 'DENY');
 });
 
+test('downloads: the admin gets every video, one by one or as one ZIP; a listener gets neither', async () => {
+  const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.alloc(400, 1)]);
+  const fd = new FormData();
+  fd.append('title', 'Night/Video: one');
+  fd.append('wav', new Blob([wav()]), 'v.wav');
+  fd.append('video', new Blob([mp4]), 'v.mp4');
+  const made = await admin.req('POST', '/api/releases', fd);
+  assert.equal(made.status, 201);
+  const list = await admin.req('GET', '/api/downloads');
+  assert.equal(list.status, 200);
+  const v = list.body.videos.find((x) => x.id === made.body.release.id);
+  assert.equal(v.video_size, mp4.length);
+  assert.match(v.download_url, /\/video\?download=1$/);
+  const zip = await admin.req('GET', `/downloads/videos.zip?ids=${v.id}`, undefined, { raw: true });
+  assert.equal(zip.status, 200);
+  assert.equal(zip.headers.get('content-type'), 'application/zip');
+  const buf = Buffer.from(await zip.arrayBuffer());
+  assert.equal(buf.readUInt32LE(0), 0x04034b50, 'starts as a ZIP');
+  assert.ok(buf.includes(Buffer.from('Night Video one (Official Visualizer).mp4')), 'named after the release, safe for any computer');
+  assert.ok(buf.includes(mp4), 'holds the video as it is');
+  assert.equal((await listener.req('GET', '/api/downloads')).status, 403);
+  assert.equal((await listener.req('GET', '/downloads/videos.zip', undefined, { raw: true })).status, 403);
+  assert.equal((await admin.req('GET', '/downloads/videos.zip?ids=999999', undefined, { raw: true })).status, 404);
+});
+
 test('deleting a release removes its files', async () => {
   assert.equal((await admin.req('DELETE', `/api/releases/${hiddenId}`)).status, 200);
   assert.equal(fs.existsSync(path.join(dataDir, 'uploads', 'releases', String(hiddenId))), false);

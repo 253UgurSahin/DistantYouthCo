@@ -17,6 +17,7 @@ import { generateYoutubeKit, extractBpm, LIMITS, claudeConfigured } from './yout
 import { suggestNames } from './albumnames.js';
 import { computeStats, PERIODS } from './stats.js';
 import { ClaudeError } from './claude.js';
+import { writeZip, safeName } from './zip.js';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -391,6 +392,51 @@ export function createApp() {
       return res.download(file, `${slug(r.title)}-${kind}${path.extname(file)}`);
     }
     res.sendFile(file, { acceptRanges: true, dotfiles: 'deny' });
+  });
+
+  // ---------- downloads: every release's video, one by one or together as a ZIP (admin) ----------
+
+  const releasesWithVideo = (user) => listReleases(user)
+    .map((r) => ({ r, file: storedPath(r.id, r.video_file) }))
+    .filter((x) => x.file);
+
+  app.get('/api/downloads', requireAdmin, (req, res) => {
+    res.json({
+      videos: releasesWithVideo(req.user).map(({ r, file }) => ({
+        ...serializeRelease(r, req.user),
+        video_size: fs.statSync(file).size,
+        download_url: `/media/${r.id}/video?download=1`,
+      })),
+    });
+  });
+
+  app.get('/downloads/videos.zip', requireAdmin, async (req, res) => {
+    const all = releasesWithVideo(req.user);
+    const wanted = typeof req.query.ids === 'string' && req.query.ids
+      ? new Set(req.query.ids.split(',').map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0))
+      : null;
+    const chosen = wanted ? all.filter(({ r }) => wanted.has(r.id)) : all;
+    if (!chosen.length) throw notFound('Geen video\'s om te downloaden.');
+    const used = new Set();
+    const entries = chosen.map(({ r, file }) => {
+      const base = safeName(`${r.title} (${r.video_type || 'Video'})`);
+      let name = `${base}${path.extname(file) || '.mp4'}`;
+      for (let n = 2; used.has(name.toLowerCase()); n++) name = `${base} ${n}${path.extname(file) || '.mp4'}`;
+      used.add(name.toLowerCase());
+      return { name, path: file };
+    });
+    const day = new Date().toISOString().slice(0, 10);
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="distant-youth-videos-${day}.zip"`,
+      'Cache-Control': 'no-store',
+    });
+    try {
+      await writeZip(res, entries);
+    } catch (e) {
+      console.error('ZIP mislukt:', e.message);
+      res.destroy(e);
+    }
   });
 
   // ---------- collections (folders, admin manages) ----------
