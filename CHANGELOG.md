@@ -8,6 +8,10 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in `package.json`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 1.2.1 (2026-11-17)
+Reparaties
+- Het inlogscherm scrolde een stukje (er werd ruimte vrijgehouden voor de muziekspeler, die daar niet is). Het past nu precies in het venster, ook op een telefoon.
+
 ## 1.2.0 (2026-11-17)
 Nieuw
 - Downloads: alle video's van je releases op één plek, één MP4 per klik of de gekozen video's samen als één ZIP, elk bestand genoemd naar zijn release. Filter op "nog niet op YouTube". Werkt ook boven de 4 GB.
