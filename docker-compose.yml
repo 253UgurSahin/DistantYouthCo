@@ -3,12 +3,13 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    env_file:
-      - path: .env
-        required: false
+      - "3000:80"
+    environment:
+      # optioneel: ANTHROPIC_API_KEY, of zet de key in de app bij Instellingen
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
     volumes:
-      - studio-data:/data
+      - studio-storage:/var/www/html/storage
 
 volumes:
-  studio-data:
+  studio-storage:

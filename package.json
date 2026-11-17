@@ -1,32 +1,16 @@
 {
   "name": "distantyouthco",
-  "version": "1.3.0",
-  "description": "Distant Youth Co. \u2014 persoonlijke muziekbibliotheek, player en YouTube-release-assistent",
-  "main": "backend/node/server.js",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Hulpmiddelen naast de Laravel-app: iconen, lettertypes en de browsertests. De app zelf is PHP (composer.json).",
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning backend/node/server.js",
-    "dev": "node --watch --disable-warning=ExperimentalWarning backend/node/server.js",
-    "test": "node --disable-warning=ExperimentalWarning --test tests/node/*.test.js",
-    "test:php": "node --disable-warning=ExperimentalWarning --test tests/php/*.test.js",
-    "build:shared-host": "node scripts/build-shared-host.mjs",
+    "build:icons": "node scripts/build-icons.mjs",
+    "build:fonts": "node scripts/build-fonts.mjs",
     "test:e2e": "cd tests/e2e && npx playwright test --project=chromium"
   },
-  "author": "",
-  "license": "UNLICENSED",
-  "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
+  "devDependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/montserrat": "^5.3.0",
-    "express": "^5.3.0",
-    "multer": "^2.5.0"
-  },
-  "type": "module",
-  "private": true,
-  "engines": {
-    "node": ">=22.13"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.63.0",
     "lucide-static": "^1.72.0"
   }
 }

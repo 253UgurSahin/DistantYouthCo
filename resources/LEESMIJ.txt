@@ -1,0 +1,58 @@
+Distant Youth Studio op shared hosting (Laravel, PHP)
+=====================================================
+
+Wat je nodig hebt
+- Hosting met PHP 8.2 of nieuwer (kies in je hostingpaneel de nieuwste PHP-versie).
+- De PHP-extensies pdo_sqlite, openssl, mbstring, fileinfo en zip (bijna altijd aan).
+- Je site op de hoofdmap van een (sub)domein, bijvoorbeeld studio.jouwdomein.nl.
+- Geen Node.js, geen terminal en geen database nodig: de app zet alles zelf klaar.
+
+Installeren
+1. Pak de ZIP uit op je computer. Je krijgt twee mappen:
+     public_html   wat je bezoekers laden (de schermen en index.php)
+     distantyouth  de app zelf, en straks je database en muziek
+2. Upload de INHOUD van public_html naar de map van je (sub)domein
+   (vaak public_html, www of htdocs). Let op: ook het verborgen bestand .htaccess.
+3. Upload de map distantyouth NAAST die map, niet erin. Zo:
+     /home/jouwnaam/public_html/index.php
+     /home/jouwnaam/distantyouth/app/...
+   Kan dat niet bij je host, zet distantyouth dan IN public_html: de map heeft een eigen
+   .htaccess die hem afsluit, maar naast public_html is veiliger.
+4. Open je site. Je krijgt "Account aanmaken": jouw eerste account is de admin.
+   Er is geen standaard gebruiker of wachtwoord: die kies je hier zelf.
+
+Wat de app bij het eerste bezoek zelf doet
+- Hij maakt distantyouth/.env (uit .env.example) met een eigen geheime sleutel (APP_KEY).
+- Hij maakt de database distantyouth/storage/app/database.sqlite en de tabellen.
+- Bij een nieuwe versie werkt hij de tabellen vanzelf bij.
+
+Controleren
+- Open https://jouwdomein/api/session
+  Goed: je ziet iets als {"user":null,"needsSetup":true,"version":"2.0.0",...}
+  Zie je een fout met "distantyouth": de map staat niet op de goede plek (stap 3).
+  Zie je "PHP 8.2": kies een nieuwere PHP-versie in je hostingpaneel.
+- Zie je "Er ging iets mis op de server": kijk in distantyouth/storage/logs/laravel.log.
+  Vaak mag de server niet schrijven in distantyouth/storage: zet die map op 775.
+
+Uploaden van grote bestanden
+- WAV en MP4 gaan in stukjes van een paar MB naar de server, dus de uploadlimiet van je
+  host maakt niet uit. Wel telt je schijfruimte: video's zijn groot.
+- Zonder ffmpeg (op shared hosting meestal niet aanwezig) maakt de app geen MP3 uit je WAV
+  en geen cover uit je video: upload zelf een MP3 en een cover als je die wilt. De duur van
+  een WAV leest de app wel zelf.
+
+Instellingen (optioneel)
+- Je Claude API key zet je in de app onder Instellingen; die wordt versleuteld opgeslagen.
+- Wil je iets anders instellen, pas dan distantyouth/.env aan (zie de uitleg erin).
+  Verander APP_KEY nooit: dan is je opgeslagen Claude-sleutel niet meer te lezen.
+
+Back-up
+- Bewaar distantyouth/.env (de sleutel) en de map distantyouth/storage/app: daarin staan
+  de database (database.sqlite) en de map private/releases met je muziek en video's.
+
+Verhuizen vanaf versie 1 (de losse PHP- of Node.js-versie)
+- Versie 2 is opnieuw gebouwd op Laravel; de oude database past er niet in.
+  Begin met een nieuwe installatie en upload je releases opnieuw.
+
+Bijwerken naar een nieuwe versie
+- Vervang public_html en in distantyouth alles behalve .env en de map storage.

@@ -39,6 +39,7 @@ test('F01-H4 the sign-in remembers who you are and shows the password on request
   test.skip(!HAS_PASSWORDS, 'no test passwords');
   await signIn(page, ALICE);
   await expect(page.getByRole('navigation', { name: 'Hoofdmenu' })).toBeVisible();
+  await page.waitForLoadState('networkidle'); // covers still loading would rightly get 401 once the cookie is gone
   await page.context().clearCookies();
   await page.goto('/');
   await expect(page.getByLabel('Gebruikersnaam')).toHaveValue(ALICE);

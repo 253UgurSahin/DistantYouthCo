@@ -1,8 +1,19 @@
-node_modules/
-data/
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
 .env
-.env.*
-!.env.example
+.env.backup
+.env.production
+.phpunit.result.cache
+/.phpunit.cache
+/.idea
+/.vscode
 *.log
-forge-work/
-dist/
+.DS_Store
+# local work and build output
+/data
+/dist
+/forge-work
