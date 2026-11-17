@@ -6,7 +6,25 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 - **minor** (1.3.0): iets nieuws erbij, alles wat er was werkt nog zoals het werkte;
 - **patch** (1.2.1): alleen reparaties en kleine verbeteringen.
 
-Het nummer staat in `package.json`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
+Het nummer staat in het bestand `VERSION`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
+
+## 2.0.0 (2026-11-17)
+Anders
+- De app is opnieuw gebouwd op Laravel 12 (PHP 8.2 of nieuwer), met de gewone Laravel-mappen: één server voor shared hosting, Docker en je eigen computer. De Node.js-server en de losse PHP-versie zijn weg.
+- Een installatie van versie 1 neemt zijn data niet mee: begin met een nieuwe installatie en upload je releases opnieuw (zie LEESMIJ.txt).
+- De ZIP voor shared hosting maak je nu met `php artisan studio:package`. De app heeft PHP 8.2 nodig in plaats van 8.1.
+
+Nieuw
+- Bij het eerste bezoek maakt de app zelf zijn instellingen (`.env`) met een eigen sleutel, de database en de tabellen. Na een update werkt hij de tabellen vanzelf bij.
+- `php artisan studio:password <naam>` zet een nieuw wachtwoord als je het vergeten bent (als je host een terminal heeft).
+- Docker draait nu met Apache, PHP 8.3 en ffmpeg; database, bestanden en sleutel staan samen in één volume.
+
+Beter
+- Alles wat je kende werkt zoals het werkte: dezelfde schermen, dezelfde knoppen, dezelfde meldingen.
+
+Beveiliging
+- Inloggen, sessies en versleuteling via Laravel; je opgeslagen Claude-key is versleuteld met de sleutel uit `.env`.
+- Wachtwoorden met Argon2id waar de server dat kan.
 
 ## 1.3.0 (2026-11-17)
 Nieuw
