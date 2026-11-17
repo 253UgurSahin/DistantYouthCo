@@ -491,30 +491,59 @@ export function accountView() {
 // ---------- S07 Sign in / first admin ----------
 
 export function authView(setup, onDone) {
-  const user = el('input', { class: 'input lg', id: 'a-user', autocomplete: 'username', required: true, autocapitalize: 'none' });
+  // One card: your name, your password, one button. The name is remembered on this device, so next
+  // time only the password is asked; the eye shows what you typed; you stay signed in for 30 days.
+  let last = '';
+  try { last = localStorage.getItem('dyc-last-user') || ''; } catch { /* private window: nothing remembered */ }
+  const user = el('input', { class: 'input lg', id: 'a-user', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false', value: setup ? '' : last });
   const pass = el('input', { class: 'input lg', id: 'a-pass', type: 'password', autocomplete: setup ? 'new-password' : 'current-password', required: true });
-  const err = el('div', { role: 'alert' });
-  const btn = el('button', { type: 'submit', class: 'btn primary lg' }, setup ? 'Admin aanmaken' : 'Inloggen');
+  const eye = el('button', { type: 'button', class: 'icon-btn plain pass-eye', 'aria-label': 'Laat zien wat je typt', 'aria-pressed': 'false', onclick: () => {
+    const show = pass.type === 'password';
+    pass.type = show ? 'text' : 'password';
+    eye.setAttribute('aria-pressed', String(show));
+    eye.setAttribute('aria-label', show ? 'Verberg wat je typt' : 'Laat zien wat je typt');
+    eye.replaceChildren(icon(show ? 'eye-off' : 'eye', 'sm'));
+    pass.focus();
+  } }, icon('eye', 'sm'));
+  const err = el('div', { role: 'alert', class: 'auth-err' });
+  const btn = el('button', { type: 'submit', class: 'btn primary lg auth-go' }, setup ? 'Account aanmaken' : 'Inloggen');
   const submit = async (e) => {
     e.preventDefault();
     err.replaceChildren();
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
     try {
       const res = await api(setup ? '/setup' : '/login', { method: 'POST', body: { username: user.value.trim(), password: pass.value } });
+      try { localStorage.setItem('dyc-last-user', res.user.username); } catch { /* fine */ }
       onDone(res.user);
     } catch (x) {
       err.replaceChildren(el('p', { class: 'error-text' }, icon('circle-alert', 'sm'), x.message));
       btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      pass.select();
     }
   };
+  const notMe = !setup && last ? el('button', { type: 'button', class: 'link-btn xs', onclick: () => {
+    try { localStorage.removeItem('dyc-last-user'); } catch { /* fine */ }
+    user.value = '';
+    notMe.remove();
+    user.focus();
+  } }, `Niet ${last}?`) : null;
+  // Focus where you start typing: the password when the name is already there.
+  setTimeout(() => (user.value ? pass : user).focus(), 60);
   return el('div', { class: 'auth-page' },
     el('form', { class: 'auth', onsubmit: submit },
       el('img', { src: '/img/emblem.png', alt: '' }),
-      el('h1', { class: 'title', style: { textAlign: 'center', letterSpacing: '.2em' } }, 'Distant Youth Studio'),
-      setup ? el('p', { class: 'small muted', style: { margin: 0, textAlign: 'center' } }, 'Welkom. Maak eerst je eigen admin-account aan. Daarna kun je luisteraars toevoegen.') : null,
+      el('div', { class: 'auth-head' },
+        el('h1', { class: 'auth-title' }, setup ? 'Welkom' : 'Welkom terug'),
+        el('p', { class: 'small muted' }, setup ? 'Maak je eigen account aan. Daarna kun je luisteraars toevoegen.' : 'Distant Youth Studio')),
       field('a-user', 'Gebruikersnaam', user, setup ? '3 tot 32 tekens: letters, cijfers, _ . -' : null),
-      field('a-pass', 'Wachtwoord', pass, setup ? 'Minstens 8 tekens.' : null),
-      err, btn));
+      el('div', { class: 'field' },
+        el('label', { for: 'a-pass' }, 'Wachtwoord'),
+        el('div', { class: 'pass-wrap' }, pass, eye),
+        setup ? el('div', { class: 'hint' }, 'Minstens 8 tekens.') : null),
+      err, btn,
+      el('p', { class: 'xs muted auth-foot' }, 'Je blijft 30 dagen ingelogd op dit apparaat.', notMe ? ' ' : null, notMe)));
 }
 
 export { coverEl, YT_WORDS };

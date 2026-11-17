@@ -5,7 +5,7 @@ guard();
 
 test('F01-H2 the sign-in page loads and passes the accessibility scan', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Distant Youth Studio' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welkom terug' })).toBeVisible();
   await expectAccessible(page);
 });
 
@@ -34,3 +34,19 @@ test.describe('F01 sign in', () => {
     expect((await context.request.get('/api/releases', { headers: { 'X-Requested-With': 'dyc' } })).status()).toBe(401);
   });
 });
+
+test('F01-H4 the sign-in remembers who you are and shows the password on request', async ({ page }) => {
+  test.skip(!HAS_PASSWORDS, 'no test passwords');
+  await signIn(page, ALICE);
+  await expect(page.getByRole('navigation', { name: 'Hoofdmenu' })).toBeVisible();
+  await page.context().clearCookies();
+  await page.goto('/');
+  await expect(page.getByLabel('Gebruikersnaam')).toHaveValue(ALICE);
+  await expect(page.getByLabel('Wachtwoord')).toBeFocused();
+  await page.getByLabel('Wachtwoord').fill('zichtbaar');
+  await page.getByRole('button', { name: 'Laat zien wat je typt' }).click();
+  await expect(page.getByLabel('Wachtwoord')).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: `Niet ${ALICE}?` }).click();
+  await expect(page.getByLabel('Gebruikersnaam')).toHaveValue('');
+});
+

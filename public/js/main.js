@@ -6,6 +6,7 @@ import { mount as mountDepth } from '/vendor/depth.js';
 import { homeView, releaseView, collectionsView, collectionView, playlistsView, playlistView } from './views-listen.js';
 import { editView, youtubeView, accountsView, settingsView, accountView, authView, themeButtons } from './views-admin.js';
 import { loading, errorPage } from './parts.js';
+import { downloadsView } from './views-downloads.js';
 
 const shell = document.getElementById('shell');
 const main = document.getElementById('main');
@@ -25,6 +26,7 @@ const ROUTES = [
   [/^\/collectie\/(\d+)$/, (m) => collectionView(m[1]), 'collecties'],
   [/^\/playlists$/, () => playlistsView(), 'playlists'],
   [/^\/playlist\/(\d+)$/, (m) => playlistView(m[1]), 'playlists'],
+  [/^\/downloads$/, () => downloadsView(), 'downloads'],
   [/^\/accounts$/, () => accountsView(), 'account'],
   [/^\/instellingen$/, () => settingsView(), 'account'],
   [/^\/account$/, () => accountView(), 'account'],
@@ -62,7 +64,7 @@ function header(active) {
   const navLink = (href, label, key) => el('a', { href, ...(active === key ? { 'aria-current': 'page' } : {}) }, label);
   return el('header', { class: 'header' }, el('div', { class: 'wrap' },
     el('a', { class: 'brand', href: '#/' }, el('img', { src: '/img/emblem.png', alt: '' }), el('span', {}, el('b', {}, 'DISTANT YOUTH'), el('small', {}, 'STUDIO'))),
-    el('nav', { class: 'nav', 'aria-label': 'Hoofdmenu' }, navLink('#/', 'Releases', 'releases'), navLink('#/collecties', 'Collecties', 'collecties'), navLink('#/playlists', 'Playlists', 'playlists')),
+    el('nav', { class: 'nav', 'aria-label': 'Hoofdmenu' }, navLink('#/', 'Releases', 'releases'), navLink('#/collecties', 'Collecties', 'collecties'), navLink('#/playlists', 'Playlists', 'playlists'), isAdmin() ? navLink('#/downloads', 'Downloads', 'downloads') : null),
     el('a', { class: 'icon-btn', href: '#/?focus=search', 'aria-label': 'Zoeken' }, icon('search', 'sm')),
     isAdmin() ? el('a', { class: 'btn btn-new', href: '#/nieuw', 'aria-label': 'Nieuwe release' }, icon('plus', 'sm'), el('span', {}, 'Nieuwe release')) : null,
     el('div', { class: 'menu' }, menuBtn, menuPanel)));

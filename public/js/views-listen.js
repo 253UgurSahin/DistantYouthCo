@@ -53,6 +53,9 @@ export async function homeView(query) {
   page.append(body);
   if (!releases.length) return page;
 
+  // For the admin, first: what to do next, one step per release, each a link straight to where it is done.
+  if (isAdmin()) body.append(todoPanel(releases));
+
   // Releases with filter and search.
   let filter = query.get('status') || 'all';
   let term = query.get('q') || '';
@@ -302,3 +305,32 @@ export async function playlistView(id) {
 }
 
 export { STATUS_WORDS };
+
+// ---------- Te doen: the next step of every release that is not live yet ----------
+
+function nextStep(r) {
+  if (!r.has.video) return { what: 'Video uploaden', href: `#/release/${r.id}/bewerken`, ic: 'upload' };
+  if (!r.yt_description) return { what: 'YouTube-tekst maken', href: `#/release/${r.id}/youtube?generate=1`, ic: 'message-square-text' };
+  if (!r.on_youtube) return { what: 'Op YouTube zetten', href: `#/release/${r.id}/youtube`, ic: 'clapperboard' };
+  return null;
+}
+
+function todoPanel(releases) {
+  const steps = releases.map((r) => ({ r, s: nextStep(r) })).filter((x) => x.s);
+  const head = el('div', { class: 'section-head' }, el('h2', { id: 'todo-h' }, 'Te doen'),
+    el('span', { class: 'small faint' }, steps.length ? `${steps.length} ${steps.length === 1 ? 'release' : 'releases'} onderweg` : 'alles live'),
+    el('span', { class: 'rule' }), el('a', { href: '#/downloads', class: 'small' }, 'Alle video\'s downloaden'));
+  if (!steps.length) {
+    return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head,
+      el('p', { class: 'todo-done' }, icon('circle-check', 'sm'), 'Alles staat op YouTube. Tijd voor de volgende.'));
+  }
+  const MAX = 5;
+  const list = el('ul', { class: 'todo-list' }, steps.slice(0, MAX).map(({ r, s }) => el('li', {},
+    el('a', { class: 'todo-row', href: s.href },
+      coverEl(r, 'xs'),
+      el('span', { class: 'todo-text' }, el('b', {}, r.title), el('span', { class: 'xs muted' }, moon(r.status, 'sm'), ` ${STATUS_WORDS[r.status]}${r.hidden ? ' · verborgen' : ''}`)),
+      el('span', { class: 'todo-go' }, icon(s.ic, 'sm'), s.what, icon('chevron-right', 'sm'))))));
+  return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head, list,
+    steps.length > MAX ? el('p', { class: 'small muted', style: { margin: 0 } }, `En nog ${steps.length - MAX}: kies Concept of Klaar voor YouTube hieronder.`) : null);
+}
+
