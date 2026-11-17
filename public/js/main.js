@@ -49,7 +49,8 @@ function header(active) {
     isAdmin() ? el('a', { href: '#/accounts' }, icon('users', 'sm'), 'Accounts') : null,
     isAdmin() ? el('a', { href: '#/instellingen' }, icon('settings', 'sm'), 'Instellingen') : null,
     el('hr'),
-    el('button', { type: 'button', onclick: logout }, icon('log-out', 'sm'), 'Uitloggen'));
+    el('button', { type: 'button', onclick: logout }, icon('log-out', 'sm'), 'Uitloggen'),
+    session.version ? el('div', { class: 'menu-version' }, `Versie ${session.version}`) : null);
   // On Accounts, Instellingen and Account the avatar shows where you are: those pages live in its menu.
   const menuBtn = el('button', { type: 'button', class: 'icon-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'account-menu', 'aria-label': `Account: ${session.user.username}`, ...(active === 'account' ? { 'aria-current': 'page' } : {}) },
     el('span', { class: 'caps', style: { fontWeight: '600', fontSize: '13px' } }, session.user.username.slice(0, 1)));
@@ -139,6 +140,7 @@ player.onChange(() => {
     const s = await api('/session');
     session.user = s.user;
     session.needsSetup = s.needsSetup;
+    session.version = s.version || '';
   } catch {
     main.replaceChildren(errorPage({ message: 'Kan de server niet bereiken.' }));
     return;

@@ -1,6 +1,6 @@
 {
   "name": "distantyouthco",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Distant Youth Co. — persoonlijke muziekbibliotheek, player en YouTube-release-assistent",
   "main": "src/server.js",
   "scripts": {

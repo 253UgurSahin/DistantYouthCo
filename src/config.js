@@ -1,9 +1,12 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const ROOT_DIR = path.resolve(here, '..');
+// The version as major.minor.patch (SemVer), from package.json: shown in the app, kept in CHANGELOG.md.
+export const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8')).version;
 export const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT_DIR, 'data'));
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 export const PORT = Number(process.env.PORT || 3000);

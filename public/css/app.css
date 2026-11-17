@@ -758,6 +758,7 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .cover-face.empty img { width: 44%; opacity: .18; }
 /* Te doen: two wide columns, so each title reads whole */
 .todo-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); }
+.menu-version { padding: 6px 12px 2px; font-size: var(--text-xs); color: var(--color-text-faint); font-variant-numeric: tabular-nums; }
 /* reduced motion, as the depth kit does it: cards lie flat, without the shadow of something that floats,
    covers and stacks rest straight; nothing is taken away. Last in the file, so it wins over the leans above. */
 @media (prefers-reduced-motion: reduce) {
