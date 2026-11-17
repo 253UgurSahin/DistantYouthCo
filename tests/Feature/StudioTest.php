@@ -150,4 +150,21 @@ class StudioTest extends TestCase
         $this->assertStringContainsString('frame-src https://www.youtube-nocookie.com;', $csp);
         $this->assertStringNotContainsString('frame-src *', $csp);
     }
+
+    public function test_the_youtube_texts_fill_in_by_themselves_and_follow_the_release_until_edited(): void
+    {
+        $this->actingAs($this->admin());
+        $r = $this->app_()->post('/api/releases', ['title' => 'Vanzelf', 'style' => 'riddim, 150 bpm', 'wav' => self::file('a.wav', self::wav())], ['Accept' => 'application/json'])->assertCreated()->json('release');
+        $this->assertSame('Vanzelf — Distant Youth Co. (Official Visualizer)', $r['yt_title']);
+        $this->assertStringContainsString('150 BPM · Riddim', $r['yt_description']);
+        $this->assertSame('template', $r['yt_generated_with']);
+        // A new title: the template text goes along.
+        $put = fn (array $f) => $this->app_()->post("/api/releases/{$r['id']}", $f, ['X-HTTP-Method-Override' => 'PUT', 'Accept' => 'application/json'])->assertOk()->json('release');
+        $this->assertSame('Anders — Distant Youth Co. (Official Visualizer)', $put(['title' => 'Anders', 'style' => 'riddim, 150 bpm'])['yt_title']);
+        // Edited by hand: it stays.
+        $this->app_()->putJson("/api/releases/{$r['id']}/youtube", ['yt_title' => 'Mijn titel', 'yt_description' => 'Mijn tekst', 'yt_tags' => 'a'])->assertOk()->assertJsonPath('release.yt_generated_with', 'edited');
+        $after = $put(['title' => 'Nog anders', 'style' => 'riddim, 150 bpm']);
+        $this->assertSame('Mijn titel', $after['yt_title']);
+        $this->assertSame('Mijn tekst', $after['yt_description']);
+    }
 }

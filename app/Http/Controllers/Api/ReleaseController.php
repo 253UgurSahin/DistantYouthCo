@@ -59,6 +59,7 @@ class ReleaseController extends Controller
             return $release;
         });
         $this->afterFiles($release);
+        $this->autoText($release);
 
         return response()->json(['release' => new ReleaseResource($release->fresh('folder'))], 201);
     }
@@ -101,6 +102,7 @@ class ReleaseController extends Controller
             $release->save();
         });
         $this->afterFiles($release);
+        $this->autoText($release);
 
         return response()->json(['release' => new ReleaseResource($release->fresh('folder'))]);
     }
@@ -131,6 +133,25 @@ class ReleaseController extends Controller
         $release->touch();
 
         return response()->json(['release' => new ReleaseResource($release->fresh('folder'))]);
+    }
+
+    /**
+     * The YouTube texts filled in with the template: at once for a new release, and again after a
+     * change of title, style or lyrics while nobody touched them (still "template"). Texts that Claude
+     * wrote or that were edited stay. Claude rewrites in the YouTube-kit, on request (it costs a little).
+     */
+    private function autoText(Release $release): void
+    {
+        if (trim((string) $release->yt_description) !== '' && $release->yt_generated_with !== 'template') {
+            return;
+        }
+        $out = app(YoutubeKit::class)->generate($release, Setting::current(), false, '');
+        $release->forceFill([
+            'yt_title' => $out['title'],
+            'yt_description' => $out['description'],
+            'yt_tags' => $out['tags'],
+            'yt_generated_with' => $out['generated_with'],
+        ])->saveQuietly();
     }
 
     /** The duration now; an MP3 and a cover after the answer is sent, where ffmpeg is there. */

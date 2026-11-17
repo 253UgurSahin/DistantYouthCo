@@ -40,6 +40,44 @@ test.describe('as admin', () => {
     expect(b.youtube_id).toBe('dQw4w9WgXcQ');
   });
 
+  test('F10-H3 the form fills itself: title from the WAV, every file to its slot, a warning for a double, the YouTube text made', async ({ page }) => {
+    const n = Date.now();
+    await page.goto('/#/nieuw');
+    await page.locator('#file-wav').setInputFiles([file(`Self_Filled_${n}.wav`, 'demo.wav'), file(`Self Filled ${n}.mp4`, 'visualizer.mp4'), file('art.jpg', 'cover-lanterns.jpg')]);
+    await expect(page.getByLabel('Titel', { exact: true })).toHaveValue(`Self Filled ${n}`);
+    await expect(page.locator('#file-video-text')).toContainText(`Self Filled ${n}.mp4`);
+    await expect(page.locator('#file-cover-text')).toContainText('art.jpg');
+    await page.getByLabel('Titel', { exact: true }).fill('Lanterns in the Rain');
+    await expect(page.locator('#u-title-dup')).toContainText('Er is al een release met deze titel');
+    await page.getByLabel('Titel', { exact: true }).fill(`Self Filled ${n}`);
+    await expect(page.locator('#u-title-dup')).toBeEmpty();
+    await expect(page.getByRole('button', { name: /YouTube-kit maken/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `Self Filled ${n}` })).toBeVisible();
+    const id = page.url().match(/release\/(\d+)/)![1];
+    const r = (await (await apiAs(page, 'GET', `/releases/${id}`)).json()).release;
+    expect(r.yt_title).toBe(`Self Filled ${n} — Distant Youth Co. (Official Visualizer)`);
+    expect(r.has).toMatchObject({ wav: true, video: true, cover: true });
+
+    // The kit keeps what you change by itself.
+    await page.goto(`/#/release/${id}/youtube`);
+    await expect(page.getByRole('button', { name: 'Tekst opslaan' })).toHaveCount(0);
+    await page.locator('#yt-tags').fill('zelf, getypt');
+    await expect(page.getByText('Opgeslagen')).toBeVisible();
+    expect((await (await apiAs(page, 'GET', `/releases/${id}`)).json()).release.yt_tags).toBe('zelf, getypt');
+  });
+
+  test('F10-E1 several at once: a release that is already there is skipped unless you say so', async ({ page }) => {
+    await page.goto('/#/meerdere');
+    await page.locator('#bulk-files').setInputFiles([file('Lanterns in the Rain.wav', 'demo.wav'), file(`Fresh ${Date.now()}.wav`, 'demo.wav')]);
+    await expect(page.getByText('Bestaat al: wordt overgeslagen.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Upload 1 release' })).toBeVisible();
+    await page.getByRole('button', { name: 'Toch uploaden' }).click();
+    await expect(page.getByRole('button', { name: 'Upload 2 releases' })).toBeVisible();
+    await page.getByRole('button', { name: 'Overslaan' }).click();
+    await expect(page.getByRole('button', { name: 'Upload 1 release' })).toBeVisible();
+  });
+
   test('F10-N1 a link that is not a YouTube video is refused on the release form', async ({ page }) => {
     await page.goto('/#/nieuw');
     await page.getByLabel('Titel', { exact: true }).fill(`YT ${Date.now()}`);

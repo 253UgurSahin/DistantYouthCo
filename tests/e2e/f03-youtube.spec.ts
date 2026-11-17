@@ -24,6 +24,8 @@ test('F03-H2 changing the video type changes the title and the first line', asyn
   await page.goto(`/#/release/${SEED.lanterns}/youtube`);
   await page.getByLabel('Type').selectOption('Official Lyric Video');
   await expect(page.getByRole('textbox', { name: 'Titel', exact: true })).toHaveValue(/\(Official Lyric Video\)$/);
+  await expect(page.getByText('Opgeslagen')).toBeVisible(); // kept by itself
+  await apiAs(page, 'POST', `/releases/${SEED.lanterns}/youtube`, { mode: 'template' }); // leave the seed as it was
 });
 
 test('F03-H3 marking it as on YouTube with its link', async ({ page }) => {

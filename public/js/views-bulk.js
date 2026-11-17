@@ -39,7 +39,7 @@ export async function bulkView() {
       const key = keyOf(f.name);
       const g = groups.find((x) => x.key === key && x.state !== 'done');
       if (g) g.files.wav = f;
-      else groups.push({ key, title: titleOf(f.name), files: { wav: f }, youtube: '', state: 'ready' });
+      else groups.push({ key, title: titleOf(f.name), files: { wav: f }, youtube: '', state: 'ready', skip: existing.has(key) });
     }
     const rest = [...loose, ...incoming.filter((f) => kindOf(f) && kindOf(f) !== 'wav')];
     loose = [];
@@ -79,8 +79,11 @@ export async function bulkView() {
   drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('dragover'); if (!busy) addFiles(e.dataTransfer.files); });
 
   // ---------- for all of them ----------
-  const folder = el('select', { class: 'select', id: 'b-folder' }, el('option', { value: '' }, 'Geen collectie'), folders.map((f) => el('option', { value: String(f.id) }, f.name)));
-  const vtype = el('select', { class: 'select', id: 'b-type' }, VIDEO_TYPES.map((t) => el('option', { value: t, selected: t === settings.settings.default_video_type }, t)));
+  const remembered = (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+  const remember = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+  const lastType = VIDEO_TYPES.includes(remembered('dyc-last-type')) ? remembered('dyc-last-type') : settings.settings.default_video_type;
+  const folder = el('select', { class: 'select', id: 'b-folder' }, el('option', { value: '' }, 'Geen collectie'), folders.map((f) => el('option', { value: String(f.id), selected: String(f.id) === remembered('dyc-last-folder') }, f.name)));
+  const vtype = el('select', { class: 'select', id: 'b-type' }, VIDEO_TYPES.map((t) => el('option', { value: t, selected: t === lastType }, t)));
   const hidden = el('input', { type: 'checkbox', id: 'b-hidden' });
   const shared = el('div', { class: 'form-grid' },
     el('div', { class: 'field' }, el('label', { for: 'b-folder' }, 'Collectie voor allemaal'), folder),
@@ -101,8 +104,15 @@ export async function bulkView() {
   const row = (g, i) => {
     const id = `b-title-${i}`;
     const title = el('input', { class: 'input', id, value: g.title, maxlength: 200, disabled: g.state !== 'ready' && g.state !== 'error', 'aria-invalid': g.title.trim() ? undefined : 'true' });
-    title.addEventListener('input', () => { g.title = title.value; dup.hidden = !existing.has(g.title.trim().toLowerCase()); });
-    const dup = el('span', { class: 'xs bulk-warn', hidden: !existing.has(g.title.trim().toLowerCase()) }, icon('circle-alert', 'xs'), 'Er is al een release met deze titel.');
+    // A release that is already there is skipped, unless you say otherwise: no doubles by accident.
+    const isDup = () => existing.has(g.title.trim().toLowerCase());
+    title.addEventListener('change', () => { g.title = title.value; g.skip = isDup(); paint(); });
+    title.addEventListener('input', () => { g.title = title.value; });
+    const dup = isDup() && (g.state === 'ready' || g.state === 'error')
+      ? el('div', { class: 'xs bulk-warn row', style: { gap: '8px' } }, icon('circle-alert', 'xs'),
+        g.skip ? 'Bestaat al: wordt overgeslagen.' : 'Bestaat al: wordt toch nog een keer geüpload.',
+        el('button', { type: 'button', class: 'btn ghost sm', disabled: busy, onclick: () => { g.skip = !g.skip; paint(); } }, g.skip ? 'Toch uploaden' : 'Overslaan'))
+      : null;
     const yt = el('input', { class: 'input', type: 'url', inputmode: 'url', id: `b-yt-${i}`, value: g.youtube, placeholder: 'https://youtu.be/…', disabled: g.state !== 'ready' && g.state !== 'error' });
     yt.addEventListener('input', () => { g.youtube = yt.value.trim(); });
     const bar = el('div', { class: 'progress', hidden: g.state !== 'busy' }, el('i'));
@@ -114,7 +124,7 @@ export async function bulkView() {
       done: el('a', { class: 'xs bulk-ok', href: `#/release/${g.id}` }, icon('circle-check', 'xs'), 'Klaar: naar de release'),
       error: el('span', { class: 'xs error-text', role: 'alert' }, icon('circle-x', 'xs'), g.error || 'Mislukt'),
     }[g.state];
-    return el('li', { class: `bulk-row ${g.state}` },
+    return el('li', { class: `bulk-row ${g.state}${g.skip ? ' skipped' : ''}` },
       el('div', { class: 'bulk-head' },
         el('div', { class: 'field grow' }, el('label', { for: id, class: 'sr-only' }, `Titel ${i + 1}`), title),
         g.state === 'ready' || g.state === 'error' ? el('button', { type: 'button', class: 'icon-btn plain', disabled: busy, 'aria-label': `${g.title || 'Release'} niet uploaden`, onclick: () => { groups.splice(groups.indexOf(g), 1); paint(); } }, icon('x', 'sm')) : null),
@@ -129,11 +139,12 @@ export async function bulkView() {
     looseBox.replaceChildren(loose.length
       ? el('p', { class: 'small bulk-warn' }, icon('circle-alert', 'sm'), `Geen WAV gevonden voor: ${loose.map((f) => f.name).join(', ')}. Voeg de WAV met dezelfde naam toe, of laat ze weg.`)
       : '');
-    const todo = groups.filter((g) => g.state === 'ready' || g.state === 'error');
+    const todo = groups.filter((g) => (g.state === 'ready' || g.state === 'error') && !g.skip);
     const bytes = todo.reduce((n, g) => n + Object.values(g.files).reduce((m, f) => m + f.size, 0), 0);
     const done = groups.filter((g) => g.state === 'done').length;
+    const skipped = groups.filter((g) => g.skip && g.state !== 'done').length;
     summary.textContent = groups.length
-      ? [todo.length ? `${todo.length} ${todo.length === 1 ? 'release' : 'releases'} klaar om te uploaden · ${mb(bytes)}` : '', done ? `${done} geüpload` : ''].filter(Boolean).join(' · ')
+      ? [todo.length ? `${todo.length} ${todo.length === 1 ? 'release' : 'releases'} klaar om te uploaden · ${mb(bytes)}` : '', skipped ? `${skipped} overgeslagen (bestaat al)` : '', done ? `${done} geüpload` : ''].filter(Boolean).join(' · ')
       : 'Nog geen bestanden gekozen.';
     go.disabled = busy || !todo.length;
     go.lastChild.textContent = busy ? 'Bezig…' : todo.length > 1 ? `Upload ${todo.length} releases` : 'Upload 1 release';
@@ -144,12 +155,14 @@ export async function bulkView() {
 
   const leaveGuard = (e) => { e.preventDefault(); e.returnValue = ''; };
   go.addEventListener('click', async () => {
-    const todo = groups.filter((g) => g.state === 'ready' || g.state === 'error');
+    const todo = groups.filter((g) => (g.state === 'ready' || g.state === 'error') && !g.skip);
     const empty = todo.find((g) => !g.title.trim());
     if (empty) { toast('Elke release heeft een titel nodig.', 'error'); paint(); return; }
     const badLink = todo.find((g) => g.youtube && !g.files.video && !youtubeIdOf(g.youtube));
     if (badLink) { toast(`${badLink.title}: dit is geen link naar een YouTube-video.`, 'error'); return; }
     busy = true;
+    remember('dyc-last-folder', folder.value);
+    remember('dyc-last-type', vtype.value);
     for (const g of todo) g.state = 'waiting';
     window.addEventListener('beforeunload', leaveGuard);
     paint();

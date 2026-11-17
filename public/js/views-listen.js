@@ -129,8 +129,6 @@ export async function releaseView(id) {
       el('div', { class: 'label rise', style: { '--i': '1' } }, r.folder_name ? [el('span', { class: 'wide-only' }, 'Release · '), `collectie ${r.folder_name}`] : 'Release', admin && r.hidden ? ' · concept, verborgen' : ''),
       el('h1', { class: 'h-display rise', style: { '--i': '2' } }, r.title),
       el('div', { class: 'muted rise', style: { '--i': '3' } }, facts.join(' · ')),
-      // On a phone the status card falls below the first screen: the release's moon shows here too.
-      el('div', { class: 'phone-status rise', style: { '--i': '3' }, 'aria-hidden': 'true' }, moon(r.status), STATUS_WORDS[r.status]),
       el('div', { class: 'row rise', style: { '--i': '4' } },
         r.audio_url ? el('button', { type: 'button', class: 'btn primary lg', onclick: () => player.play(r) }, icon('play', 'sm'), 'Afspelen') : null,
         hasVideo(r) ? el('button', { type: 'button', class: 'btn subtle lg', onclick: () => player.openVideo(r) }, icon('video', 'sm'), 'Video') : null,
@@ -319,7 +317,7 @@ function todoPanel(releases) {
   const steps = releases.map((r) => ({ r, s: nextStep(r) })).filter((x) => x.s);
   const head = el('div', { class: 'section-head' }, el('h2', { id: 'todo-h' }, 'Te doen'),
     el('span', { class: 'small faint' }, steps.length ? `${steps.length} ${steps.length === 1 ? 'release' : 'releases'} onderweg` : 'alles live'),
-    el('span', { class: 'rule' }), el('a', { href: '#/downloads', class: 'small' }, 'Alle video\'s downloaden'));
+    el('span', { class: 'rule' }));
   if (!steps.length) {
     return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head,
       el('p', { class: 'todo-done' }, icon('circle-check', 'sm'), 'Alles staat op YouTube. Tijd voor de volgende.'));

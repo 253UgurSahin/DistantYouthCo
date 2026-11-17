@@ -20,10 +20,11 @@ const SLOTS = [
 
 export async function editView(id) {
   if (!isAdmin()) throw Object.assign(new Error('Alleen voor admin'), { status: 403 });
-  const [{ folders }, settings, existing] = await Promise.all([
+  const [{ folders }, settings, existing, all] = await Promise.all([
     api('/folders'),
     api('/settings'),
     id ? api(`/releases/${id}`).then((x) => x.release) : null,
+    id ? null : api('/releases').then((x) => x.releases),
   ]);
   const r = existing || {};
   const files = {};
@@ -37,8 +38,25 @@ export async function editView(id) {
     const n = SLOTS.filter((s) => files[s.kind] || (r.has?.[s.kind] && !removed[s.kind]) || (s.kind === 'video' && ytLink?.value.trim())).length;
     titleMoon.replaceChildren(moon(n === 0 ? 'none' : n >= SLOTS.length ? 'live' : n === 1 ? 'ready' : 'gibbous', 'xl'));
   };
+  // A file goes to its own slot by its kind, wherever it is dropped; several at once go each to theirs.
+  const kindOf = (f) => (/\.wav$/i.test(f.name) ? 'wav' : /\.mp3$/i.test(f.name) ? 'mp3' : /\.(mp4|m4v|mov)$/i.test(f.name) ? 'video' : /\.(jpe?g|png|webp)$/i.test(f.name) ? 'cover' : null);
+  const takeFiles = (list, fallback) => {
+    const many = list.length > 1;
+    for (const f of list) {
+      const k = (many ? kindOf(f) : kindOf(f) || fallback) || fallback;
+      if (!k) continue;
+      files[k] = f;
+      delete removed[k];
+      slotEls[k]?.paint();
+      // The title from the WAV's name, while there is none yet: "Lanterns_in_the_Rain.wav" -> "Lanterns in the Rain".
+      if (k === 'wav' && !title.value.trim()) {
+        title.value = f.name.replace(/\.[^.]+$/, '').replace(/_+/g, ' ').replace(/\s*\(\d+\)$/, '').trim();
+        title.dispatchEvent(new Event('input'));
+      }
+    }
+  };
   const slot = (s) => {
-    const input = el('input', { type: 'file', accept: s.accept, class: 'sr-only', id: `file-${s.kind}`, 'aria-describedby': `file-${s.kind}-text` });
+    const input = el('input', { type: 'file', accept: s.accept, multiple: !id, class: 'sr-only', id: `file-${s.kind}`, 'aria-describedby': `file-${s.kind}-text` });
     const text = el('div', { class: 'xs muted', id: `file-${s.kind}-text` });
     const bar = el('div', { class: 'progress', hidden: true }, el('i'));
     bars.push(bar);
@@ -61,10 +79,7 @@ export async function editView(id) {
         has() && s.kind !== 'wav' ? el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': `${s.title} weghalen`, onclick: () => { delete files[s.kind]; if (r.has?.[s.kind]) removed[s.kind] = true; input.value = ''; paint(); } }, icon('x', 'sm')) : null].filter(Boolean));
     };
     input.addEventListener('change', () => {
-      if (input.files[0]) {
-        files[s.kind] = input.files[0];
-        delete removed[s.kind];
-      }
+      takeFiles([...input.files], s.kind);
       paint();
     });
     node.addEventListener('dragover', (e) => { e.preventDefault(); node.classList.add('dragover'); });
@@ -72,12 +87,8 @@ export async function editView(id) {
     node.addEventListener('drop', (e) => {
       e.preventDefault();
       node.classList.remove('dragover');
-      const f = e.dataTransfer.files[0];
-      if (f) {
-        files[s.kind] = f;
-        delete removed[s.kind];
-        paint();
-      }
+      takeFiles([...e.dataTransfer.files], s.kind);
+      paint();
     });
     slotEls[s.kind] = { node, text, paint };
     paint();
@@ -88,14 +99,23 @@ export async function editView(id) {
   const ytLink = el('input', { class: 'input', id: 'u-yt', type: 'url', inputmode: 'url', value: r.youtube_url || '', placeholder: 'https://youtu.be/…', 'aria-describedby': 'u-yt-hint', maxlength: 500 });
   ytLink.addEventListener('input', () => { ytLink.removeAttribute('aria-invalid'); drawMoon(); });
 
-  const title = el('input', { class: 'input lg', id: 'u-title', value: r.title || '', required: true, maxlength: 200, autocomplete: 'off' });
+  const title = el('input', { class: 'input lg', id: 'u-title', value: r.title || '', required: true, maxlength: 200, autocomplete: 'off', 'aria-describedby': 'u-title-dup' });
+  const dup = el('div', { class: 'hint dup-hint', id: 'u-title-dup', 'aria-live': 'polite' });
+  title.addEventListener('input', () => {
+    const same = all?.find((x) => x.title.trim().toLowerCase() === title.value.trim().toLowerCase());
+    dup.replaceChildren(...(same ? [icon('circle-alert', 'xs'), 'Er is al een release met deze titel. ', el('a', { href: `#/release/${same.id}` }, 'Bekijk die')] : []));
+  });
+  const remembered = (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+  const remember = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+  const lastFolder = id ? '' : remembered('dyc-last-folder');
+  const lastType = id ? '' : remembered('dyc-last-type');
   const style = el('textarea', { class: 'textarea', id: 'u-style', rows: 3, value: r.style || '', maxlength: 4000, 'aria-describedby': 'u-style-hint' });
   const lyrics = el('textarea', { class: 'textarea', id: 'u-lyrics', rows: 14, value: r.lyrics || '', maxlength: 20000, placeholder: '[Intro]\n…\n\n[Verse 1]\n…\n\n[Chorus]\n…', 'aria-describedby': 'u-lyrics-hint' });
   const bpm = el('input', { class: 'input', id: 'u-bpm', inputmode: 'numeric', value: r.bpm ?? '', placeholder: 'uit de style' });
   const date = el('input', { class: 'input', id: 'u-date', type: 'date', value: r.release_date || '' });
   const folder = el('select', { class: 'select', id: 'u-folder' },
     el('option', { value: '' }, 'Geen collectie'),
-    folders.map((f) => el('option', { value: String(f.id), selected: r.folder_id === f.id }, f.name)),
+    folders.map((f) => el('option', { value: String(f.id), selected: id ? r.folder_id === f.id : String(f.id) === lastFolder }, f.name)),
     el('option', { value: 'new' }, '+ Nieuwe collectie…'));
   folder.addEventListener('change', async () => {
     if (folder.value !== 'new') return;
@@ -107,13 +127,14 @@ export async function editView(id) {
       folder.value = String(f.id);
     } catch (e) { fail(e); folder.value = ''; }
   });
+  const startType = r.video_type || (VIDEO_TYPES.includes(lastType) ? lastType : settings.settings.default_video_type);
   const vtype = el('select', { class: 'select', id: 'u-type' },
-    [...new Set([...VIDEO_TYPES, r.video_type || settings.settings.default_video_type])].map((t) => el('option', { value: t, selected: t === (r.video_type || settings.settings.default_video_type) }, t)));
+    [...new Set([...VIDEO_TYPES, startType])].map((t) => el('option', { value: t, selected: t === startType }, t)));
   const hidden = el('input', { type: 'checkbox', id: 'u-hidden', checked: Boolean(r.hidden) });
   const notes = el('textarea', { class: 'textarea', id: 'u-notes', rows: 3, value: r.notes || '', maxlength: 4000 });
   const errorBox = el('div', { role: 'alert' });
 
-  const save = async (thenKit) => {
+  const save = async () => {
     errorBox.replaceChildren();
     if (!title.value.trim()) {
       title.setAttribute('aria-invalid', 'true');
@@ -150,9 +171,10 @@ export async function editView(id) {
     for (const b of bars) b.hidden = !showBars;
     const setBars = (p) => { for (const b of bars) b.firstChild.style.width = `${Math.round(p * 100)}%`; };
     try {
+      if (!id) { remember('dyc-last-folder', folder.value === 'new' ? '' : folder.value); remember('dyc-last-type', vtype.value); }
       const res = await sendRelease(id ? `/releases/${id}` : '/releases', id ? 'PUT' : 'POST', fd, files, session.uploadChunk, setBars);
       toast(id ? 'Opgeslagen' : 'Release aangemaakt');
-      location.hash = thenKit ? `#/release/${res.release.id}/youtube?generate=1` : `#/release/${res.release.id}`;
+      location.hash = `#/release/${res.release.id}`;
     } catch (e) {
       errorBox.replaceChildren(el('p', { class: 'error-text' }, icon('circle-alert', 'sm'), e.message));
       for (const b of bars) b.hidden = true;
@@ -169,22 +191,24 @@ export async function editView(id) {
   const buttons = el('div', { class: 'form-actions' },
     id ? el('button', { type: 'button', class: 'btn danger', onclick: () => remove().catch(fail) }, icon('trash-2', 'sm'), 'Verwijderen') : null,
     el('span', { class: 'spacer' }),
-    el('button', { type: 'button', class: 'btn subtle lg', onclick: () => save(false) }, 'Opslaan'),
-    el('button', { type: 'button', class: 'btn primary lg', onclick: () => save(true) }, 'Opslaan en YouTube-kit maken'));
+    el('button', { type: 'button', class: 'btn primary lg', onclick: () => save() }, 'Opslaan'));
 
   return el('div', { class: 'wrap page' },
     el('div', {},
       el('a', { href: id ? `#/release/${id}` : '#/', class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), id ? r.title : 'Releases'),
       el('h1', { class: 'h-xl moon-title', style: { marginTop: '12px' } }, titleMoon, id ? 'Release bewerken' : 'Nieuwe release'),
-      el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Alleen de WAV en een titel zijn verplicht. De rest kun je later aanvullen.')),
-    el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(false); } },
+      el('p', { class: 'muted', style: { margin: '6px 0 0' } }, id ? 'Alleen de WAV en een titel zijn verplicht.' : 'Sleep je WAV (en eventueel MP4 en cover) erin: de titel komt uit de bestandsnaam en de YouTube-tekst maakt de app zelf.')),
+    el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(); },
+      // Files dropped anywhere on the form (not on a slot) go to their own slots too.
+      ondragover: (e) => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); },
+      ondrop: (e) => { if (e.defaultPrevented || !e.dataTransfer?.files.length) return; e.preventDefault(); takeFiles([...e.dataTransfer.files], null); } },
       el('section', { class: 'side-col sticky-col', 'aria-labelledby': 'files-h' }, el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'), SLOTS.map(slot),
         field('u-yt', 'Of een YouTube-link in plaats van de MP4', ytLink, 'Staat de video al op YouTube? Plak de link: de app speelt hem dan af via YouTube.'),
         el('p', { class: 'hint' }, 'Bestanden worden gecontroleerd op hun echte inhoud, niet alleen op de naam.'),
         id ? null : el('a', { href: '#/meerdere', class: 'btn subtle sm', style: { alignSelf: 'flex-start' } }, icon('files', 'sm'), 'Meerdere releases tegelijk')),
       el('section', { class: 'main-col stack', 'aria-labelledby': 'info-h', style: { gap: 'var(--space-6)' } },
         el('h2', { id: 'info-h', class: 'label' }, 'Info'),
-        field('u-title', 'Titel', title),
+        field('u-title', 'Titel', title), dup,
         field('u-style', 'Style-omschrijving', style, 'Je Suno style-prompt werkt prima. De BPM wordt er automatisch uit gehaald.'),
         field('u-lyrics', 'Lyrics', lyrics, 'Plak ze rechtstreeks uit Suno; tags als [Chorus] en [Drop] helpen de beschrijving.'),
         el('div', { class: 'form-grid' }, field('u-bpm', 'BPM', bpm), field('u-date', 'Releasedatum', date), field('u-folder', 'Collectie', folder), field('u-type', 'Video-type', vtype)),
@@ -232,10 +256,6 @@ export async function youtubeView(id, query) {
   const tc = counter('yt-title-count', titleIn, limits.title);
   const dc = counter('yt-desc-count', descIn, limits.description, hashCount);
   const gc = counter('yt-tags-count', tagsIn, limits.tags);
-  const chips = el('div', { class: 'tag-chips', 'aria-hidden': 'true' });
-  const drawChips = () => chips.replaceChildren(...tagsIn.value.split(',').map((t) => t.trim()).filter(Boolean).map((t) => el('span', {}, t)));
-  tagsIn.addEventListener('input', drawChips);
-  drawChips();
 
   const vtype = el('select', { class: 'select', id: 'yt-type', style: { width: 'auto' } },
     [...new Set([...VIDEO_TYPES, r.video_type])].map((t) => el('option', { value: t, selected: t === r.video_type }, t)));
@@ -246,29 +266,50 @@ export async function youtubeView(id, query) {
     if (re.test(first)) descIn.value = descIn.value.replace(first, first.replace(re, `(${vtype.value})`));
     tc.upd();
     dc.upd();
+    dirty = true;
+    saveTexts();
   });
 
+  // Every change is kept by itself, a moment after you stop typing: no button to forget.
   let dirty = false;
-  for (const i of [titleIn, descIn, tagsIn]) i.addEventListener('input', () => { dirty = true; });
-  const saveTexts = async (quiet) => {
-    await api(`/releases/${id}/youtube`, { method: 'PUT', body: { yt_title: titleIn.value, yt_description: descIn.value, yt_tags: tagsIn.value } });
-    dirty = false;
-    if (!quiet) toast('Opgeslagen');
+  let saveTimer = 0;
+  const saved = el('span', { class: 'xs muted save-state', 'aria-live': 'polite' });
+  const saveTexts = async () => {
+    clearTimeout(saveTimer);
+    saved.textContent = 'Opslaan…';
+    try {
+      await api(`/releases/${id}/youtube`, { method: 'PUT', body: { yt_title: titleIn.value, yt_description: descIn.value, yt_tags: tagsIn.value } });
+      dirty = false;
+      r.yt_generated_with = 'edited';
+      saved.textContent = 'Opgeslagen';
+    } catch (e) {
+      saved.textContent = '';
+      fail(e);
+    }
   };
+  for (const i of [titleIn, descIn, tagsIn]) {
+    i.addEventListener('input', () => {
+      dirty = true;
+      saved.textContent = '';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveTexts, 900);
+    });
+  }
+  window.addEventListener('hashchange', () => { if (dirty) saveTexts(); }, { once: true });
   const copyBtn = (label, input, primary) => el('button', { type: 'button', class: `btn ${primary ? 'primary' : 'subtle'}`, onclick: async (e) => {
     const b = e.currentTarget; // read it now: after the await the event has no current target any more
     if (await copyText(input.value, `${label} gekopieerd`)) {
       b.replaceChildren(icon('check', 'sm'), 'Gekopieerd');
       setTimeout(() => b.replaceChildren(icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer'), 2000);
-      if (dirty) saveTexts(true).catch(fail);
+      if (dirty) saveTexts();
     }
   } }, icon('copy', 'sm'), primary ? 'Kopieer beschrijving' : 'Kopieer');
 
   const extra = el('input', { class: 'input', id: 'yt-extra', maxlength: 1000, placeholder: 'bv. deel 2 van de reeks' });
   const genBtn = el('button', { type: 'button', class: 'btn subtle lg' }, icon('refresh-cw', 'sm'), r.yt_description ? 'Opnieuw genereren' : 'Genereren');
-  const genNote = el('div', { class: 'small muted', 'aria-live': 'polite' }, r.yt_generated_with ? `Laatst gemaakt met ${r.yt_generated_with === 'template' ? 'het template' : 'Claude'}` : '');
+  const genNote = el('div', { class: 'small muted', 'aria-live': 'polite' }, ({ '': '', template: 'Vanzelf ingevuld met het template. Wijzig je titel, style of lyrics, dan gaat de tekst mee — tot je hem zelf aanpast.', edited: 'Door jou aangepast: blijft zoals hij is.' })[r.yt_generated_with || ''] ?? 'Geschreven door Claude.');
   const generate = async () => {
-    if (r.yt_description && dirty && !(await confirmDialog('Opnieuw genereren?', 'Je aanpassingen in de tekst worden overschreven.', 'Overschrijven'))) return;
+    if (r.yt_description && (dirty || r.yt_generated_with === 'edited') && !(await confirmDialog('Opnieuw genereren?', 'Je aanpassingen in de tekst worden overschreven.', 'Overschrijven'))) return;
     genBtn.disabled = true;
     genBtn.setAttribute('aria-busy', 'true');
     genNote.textContent = mode === 'claude' ? 'Claude schrijft je beschrijving… (meestal 10 tot 30 seconden)' : 'Template wordt ingevuld…';
@@ -277,7 +318,9 @@ export async function youtubeView(id, query) {
       titleIn.value = res.release.yt_title;
       descIn.value = res.release.yt_description;
       tagsIn.value = res.release.yt_tags;
-      tc.upd(); dc.upd(); gc.upd(); drawChips(); fit(descIn); fit(tagsIn);
+      tc.upd(); dc.upd(); gc.upd(); fit(descIn); fit(tagsIn);
+      clearTimeout(saveTimer);
+      r.yt_generated_with = res.generated_with;
       dirty = false;
       genNote.textContent = `Gemaakt met ${res.generated_with === 'template' ? 'het template' : 'Claude'}. Lees het na en pas aan waar je wilt.`;
       genBtn.lastChild.textContent = 'Opnieuw genereren';
@@ -314,9 +357,14 @@ export async function youtubeView(id, query) {
   const markLive = async () => {
     const res = await api(`/releases/${id}/status`, { method: 'POST', body: { youtube_url: ytUrl.value, on_youtube: true } });
     r.on_youtube = 1;
+    r.youtube_url = ytUrl.value;
     drawSteps();
     toast(`Op YouTube gezet: ${res.release.title}`);
   };
+  // Pasting the link of the video is enough: it is marked as on YouTube at once.
+  ytUrl.addEventListener('input', () => {
+    if (youtubeIdOf(ytUrl.value) && ytUrl.value.trim() !== (r.youtube_url || '')) markLive().catch(fail);
+  });
   const sources = [
     ['Titel', r.title],
     ['Style-omschrijving', r.style ? `${styleFacts(r.style, 99).length} kenmerken` : 'leeg'],
@@ -344,8 +392,8 @@ export async function youtubeView(id, query) {
           el('label', { for: 'yt-desc', class: 'sr-only' }, 'YouTube-beschrijving'), descIn, dc.c),
         el('section', { class: 'panel stack', 'aria-labelledby': 'yt-tags-h' },
           el('div', { class: 'row' }, el('h2', { id: 'yt-tags-h', class: 'label', style: { flex: 1 } }, 'Tags'), copyBtn('Tags', tagsIn)),
-          chips, el('label', { for: 'yt-tags', class: 'sr-only' }, 'Tags, met komma\'s'), tagsIn, gc.c),
-        el('div', { class: 'row', style: { justifyContent: 'flex-end' } }, el('button', { type: 'button', class: 'btn subtle lg', onclick: () => saveTexts().catch(fail) }, 'Tekst opslaan'))),
+          el('label', { for: 'yt-tags', class: 'sr-only' }, 'Tags, met komma\'s'), tagsIn, gc.c),
+        el('p', { class: 'xs muted', style: { margin: 0, textAlign: 'right' } }, 'Wijzigingen worden vanzelf bewaard. ', saved)),
       el('aside', { class: 'side-col' },
         el('section', { class: 'panel lean-panel', 'aria-labelledby': 'steps-h' },
           el('h2', { id: 'steps-h', class: 'label' }, 'Uploaden naar YouTube'),
@@ -353,20 +401,16 @@ export async function youtubeView(id, query) {
             el('li', {}, step1, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Download de video'),
               r.has.video ? el('a', { class: 'btn subtle sm', href: `/media/${id}/video?download=1`, style: { alignSelf: 'flex-start' } }, icon('download', 'sm'), 'MP4 downloaden')
                 : el('a', { class: 'small', href: `#/release/${id}/bewerken` }, 'Nog geen video — upload er een'))),
-            el('li', {}, step2, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Maak en controleer de tekst'), el('span', { class: 'xs muted' }, 'Links: genereren, nalezen, kopiëren.'))),
+            el('li', {}, step2, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Lees de tekst na en kopieer'), el('span', { class: 'xs muted' }, 'Staat al klaar; laat Claude hem herschrijven als je wilt.'))),
             el('li', {}, step3, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Plak alles in YouTube Studio'),
               el('a', { class: 'small', href: 'https://studio.youtube.com', target: '_blank', rel: 'noopener' }, 'studio.youtube.com ', icon('external-link', 'xs')))),
             el('li', {}, step4, el('div', { class: 'grow' }, el('label', { for: 'yt-url', class: 'small', style: { fontWeight: 700 } }, 'Plak de link van je video'), ytUrl,
               el('button', { type: 'button', class: 'btn subtle', onclick: () => markLive().catch(fail) }, 'Markeer als op YouTube'))))),
-        el('section', { class: 'panel', 'aria-labelledby': 'src-h' },
-          el('h2', { id: 'src-h', class: 'label' }, 'Gebruikt als bron'),
-          el('div', { class: 'stack', style: { gap: '10px' } },
-            sources.map(([k, v]) => el('div', { class: 'row small' }, icon('check', 'sm'), el('span', { class: 'spacer' }, k), el('span', { class: 'muted' }, v)))),
-          el('a', { class: 'small', href: `#/release/${id}/bewerken`, style: { display: 'inline-block', marginTop: '12px' } }, 'Bron aanpassen')),
-        el('section', { class: 'panel quiet stack', style: { gap: '8px' } },
-          el('h2', { class: 'label' }, 'Vaste onderdelen'),
-          el('p', { class: 'small muted', style: { margin: 0 } }, 'Spotify-link, AI-vermelding en je standaard-hashtags komen uit Instellingen en staan altijd op dezelfde plek.'),
-          el('a', { class: 'small', href: '#/instellingen' }, 'Naar Instellingen')))));
+        el('section', { class: 'panel stack', 'aria-labelledby': 'src-h', style: { gap: '10px' } },
+          el('h2', { id: 'src-h', class: 'label' }, 'Waar de tekst uit komt'),
+          sources.map(([k, v]) => el('div', { class: 'row small' }, icon('check', 'sm'), el('span', { class: 'spacer' }, k), el('span', { class: 'muted' }, v))),
+          el('p', { class: 'small muted', style: { margin: '4px 0 0' } }, 'Spotify-link, AI-vermelding en standaard-hashtags komen uit ', el('a', { href: '#/instellingen' }, 'Instellingen'), '.'),
+          el('a', { class: 'small', href: `#/release/${id}/bewerken` }, 'Titel, style of lyrics aanpassen')))));
 }
 
 // ---------- S08 Accounts ----------

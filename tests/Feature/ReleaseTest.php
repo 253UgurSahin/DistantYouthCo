@@ -47,7 +47,7 @@ class ReleaseTest extends TestCase
         $this->assertSame(140, $r['bpm']);
         $this->assertEquals(3.0, $r['duration']);
         $this->assertTrue($r['has']['video']);
-        $this->assertSame('concept', $r['status']);
+        $this->assertSame('ready', $r['status'], 'video and the YouTube text (made by itself): ready for YouTube');
         $this->assertSame(self::wav(3), Storage::disk('local')->get("releases/{$r['id']}/master.wav"));
     }
 

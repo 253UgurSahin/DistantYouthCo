@@ -307,7 +307,7 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
 .field > label, .field > .label-text { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
 .input, .select, .textarea {
   width: 100%; min-height: var(--size-control); padding: 0 var(--space-4); border-radius: var(--radius-md);
-  border: var(--size-border) solid var(--color-border-input); background: var(--color-bg); color: var(--color-text); font-size: var(--text-sm);
+  border: var(--size-border) solid var(--color-border-input); background: var(--color-field); color: var(--color-text); font-size: var(--text-sm);
 }
 .textarea { padding: var(--space-3) var(--space-4); line-height: 1.6; resize: none; }
 .input.lg { min-height: var(--size-control-lg); font-size: var(--text-base); }
@@ -315,8 +315,8 @@ a:hover > .cover, .cover:hover { border-color: var(--color-text-muted); }
 .select option { background: var(--color-surface); color: var(--color-text); }
 .input:focus, .select:focus, .textarea:focus { outline: var(--size-ring) solid var(--color-text); outline-offset: 1px; }
 .input[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--color-danger); }
-.hint { font-size: var(--text-xs); color: var(--color-text-faint); }
-.counter { font-size: var(--text-xs); color: var(--color-text-faint); }
+.hint { font-size: var(--text-xs); color: var(--color-text-muted); }
+.counter { font-size: var(--text-xs); color: var(--color-text-muted); }
 .counter.over { color: var(--color-danger); font-weight: 600; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-4); }
 .check { display: flex; align-items: center; gap: var(--space-3); min-height: var(--size-touch); font-size: var(--text-sm); }
@@ -649,8 +649,6 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
   .hero-front .lean { rotate: x 24deg; translate: 0 0 30px; transform-origin: 50% 100%; }
 }
 /* round 6: on a phone the release's moon shows under its title, on the first screen */
-.phone-status { display: none; }
-@media (max-width: 640px) { .phone-status { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); } }
 /* round 6: the visualizer sits in a 16:9 frame as on YouTube (a square video gets dark bars), and its
    controls lie over the foot of the picture in the photo colours, as a player's do, so the first
    screen at 1440 keeps them in view. The colour tokens are set again inside the bar. */
@@ -794,3 +792,8 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .bulk-chip .icon-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; }
 .bulk-warn, .bulk-ok { display: inline-flex; align-items: center; gap: 6px; }
 .bulk-warn { color: var(--color-text-muted); }
+.bulk-row.skipped { border-style: dashed; }
+.bulk-row.skipped .bulk-chips { opacity: .6; }
+.dup-hint { display: flex; align-items: center; gap: 6px; margin-top: calc(var(--space-2) * -1); }
+.dup-hint:empty { display: none; }
+.save-state:empty { display: none; }
