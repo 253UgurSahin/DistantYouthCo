@@ -92,7 +92,7 @@ export function createApp() {
   });
 
   // Static: the app itself, the fonts from their packages, nothing else.
-  const pub = path.join(ROOT_DIR, 'public');
+  const pub = path.join(ROOT_DIR, 'frontend');
   // maxAge 0 with an ETag: the browser asks again on every load and gets a 304 when nothing changed,
   // so an update shows at once.
   app.use(express.static(pub, { index: 'index.html', maxAge: 0, etag: true }));

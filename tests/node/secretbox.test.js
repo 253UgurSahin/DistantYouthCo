@@ -6,7 +6,7 @@ import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'dyc-box-'));
 delete process.env.SECRET_KEY;
-const { seal, open, isSealed } = await import('../src/secretbox.js');
+const { seal, open, isSealed } = await import('../../backend/node/secretbox.js');
 
 test('X002: a sealed value opens again, and holds no plain text', () => {
   const s = seal('sk-ant-example-key');

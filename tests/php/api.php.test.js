@@ -1,6 +1,6 @@
 // The PHP server (php/, for shared hosting): the same API as the Node.js server, under the limits of a
 // shared host (2 MB per upload, 8 MB per request). Starts PHP's built-in server on a free port.
-//   node --test test/php/
+//   npm run test:php
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
@@ -77,7 +77,7 @@ before(async () => {
   const port = 20000 + Math.floor(Math.random() * 20000);
   base = `http://127.0.0.1:${port}`;
   const dist = path.join(ROOT, 'dist', 'shared-host');
-  proc = spawn('php', ['-d', 'upload_max_filesize=2M', '-d', 'post_max_size=8M', '-S', `127.0.0.1:${port}`, '-t', path.join(dist, 'public_html'), path.join(ROOT, 'php', 'dev-router.php')], {
+  proc = spawn('php', ['-d', 'upload_max_filesize=2M', '-d', 'post_max_size=8M', '-S', `127.0.0.1:${port}`, '-t', path.join(dist, 'public_html'), path.join(ROOT, 'backend', 'php', 'dev-router.php')], {
     env: { ...process.env, DATA_DIR: dataDir, DYC_APP_DIR: path.join(dist, 'distantyouth'), DYC_NO_FFMPEG: '1', ANTHROPIC_BASE_URL: `http://127.0.0.1:${fake.address().port}`, ANTHROPIC_API_KEY: '' },
     stdio: 'ignore',
   });

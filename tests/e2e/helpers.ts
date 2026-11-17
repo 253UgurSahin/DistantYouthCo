@@ -15,7 +15,7 @@ export const AUTH = { admin: '.auth/admin.json', alice: '.auth/alice.json', bob:
 export const HAS_PASSWORDS = Object.values(PASSWORDS).every(Boolean);
 // Seed records of the demo instance (forge-work/improve/seed.mjs).
 export const SEED = { lanterns: 3, hearts: 1, hiddenDemo: 2, folder: 1 };
-export const ASSETS = '../forge-work/improve/assets';
+export const ASSETS = '../../forge-work/improve/assets';
 
 export async function signIn(page: Page, user: string, password = PASSWORDS[user]) {
   await page.goto('/');

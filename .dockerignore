@@ -1,10 +1,11 @@
 node_modules
 data
 forge-work
-test
+tests
 scripts
 .git
 .env
 .env.*
 *.log
-e2e
+dist
+backend/php

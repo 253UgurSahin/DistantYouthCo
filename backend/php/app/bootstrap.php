@@ -1,6 +1,6 @@
 <?php
 // Distant Youth Studio, the server in PHP: for shared hosting, where Node.js cannot run.
-// It speaks the same API as src/ (the Node.js server), so the screens in public/ work with either.
+// It speaks the same API as backend/node/ (the Node.js server), so the screens in frontend/ work with either.
 declare(strict_types=1);
 
 const DYC_SESSION_DAYS = 30;
@@ -23,7 +23,8 @@ function cfg(string $key, $default = null) {
 }
 
 function dyc_version(): string {
-    foreach ([DYC_APP . '/VERSION', dirname(DYC_APP) . '/package.json'] as $p) {
+    // VERSION in a build for the host; package.json two folders up when it runs from the project itself.
+    foreach ([DYC_APP . '/VERSION', dirname(DYC_APP, 2) . '/package.json'] as $p) {
         if (!is_file($p)) continue;
         $raw = trim((string) file_get_contents($p));
         if (str_ends_with($p, 'VERSION')) return $raw;

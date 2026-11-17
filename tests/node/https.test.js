@@ -11,7 +11,7 @@ process.env.DATA_DIR = dataDir;
 process.env.DYC_NO_FFMPEG = '1';
 process.env.TRUST_PROXY = '1';
 delete process.env.COOKIE_SECURE;
-const { createApp } = await import('../src/app.js');
+const { createApp } = await import('../../backend/node/app.js');
 
 let server;
 let base;

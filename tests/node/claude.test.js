@@ -26,7 +26,7 @@ process.env.DATA_DIR = dataDir;
 process.env.DYC_NO_FFMPEG = '1';
 process.env.ANTHROPIC_BASE_URL = `http://127.0.0.1:${fake.address().port}`;
 process.env.ANTHROPIC_API_KEY = 'example-key';
-const { createApp } = await import('../src/app.js');
+const { createApp } = await import('../../backend/node/app.js');
 
 const message = (text, stop_reason = 'end_turn') => ({
   json: {

@@ -11,15 +11,18 @@ Bij elke versie, in één commit `release: vX.Y.Z`:
 2. een blok bovenaan in `CHANGELOG.md` (Nederlands, in gewone woorden: Nieuw / Beter / Reparaties / Beveiliging);
 3. een annotated git-tag `vX.Y.Z` op die commit. Pushen (ook van tags) alleen als de gebruiker het vraagt.
 
-De app toont de versie (`/api/session` geeft `version`, uit `package.json` via `src/config.js`).
+De app toont de versie (`/api/session` geeft `version`, uit `package.json` via `backend/node/config.js` en `backend/php/app/bootstrap.php`).
+
+## Mappen
+`frontend/` (schermen), `backend/node/`, `backend/php/`, `tests/{node,php,e2e}/`, `scripts/`. Nieuwe code komt in een van deze mappen; zie README.md voor het overzicht.
 
 ## Twee servers, één app
-De schermen (`public/`) praten met een van twee servers met precies dezelfde API:
-- `src/` in Node.js (Docker, een VPS, lokaal);
-- `php/` in PHP 8.1+ voor shared hosting (de gebruiker host zo). `npm run build:shared-host` maakt `dist/shared-host/` en de ZIP om te uploaden.
+De schermen (`frontend/`) praten met een van twee servers met precies dezelfde API:
+- `backend/node/` in Node.js (Docker, een VPS, lokaal);
+- `backend/php/` in PHP 8.1+ voor shared hosting (de gebruiker host zo). `npm run build:shared-host` maakt `dist/shared-host/` en de ZIP om te uploaden.
 Elke wijziging aan de API gaat in beide, met dezelfde paden, antwoorden en meldingen.
 
 ## Controleren voor een versie
 - `npm test` (Node) en `npm run test:php` (PHP, met de limieten van een shared host);
-- de end-to-end tests (`cd e2e && npx playwright test --project=chromium`) tegen beide servers;
+- de end-to-end tests (`npm run test:e2e`, met `FORGE_BASE_URL`) tegen beide servers;
 - de wandeling langs alle schermen.

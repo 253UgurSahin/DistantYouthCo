@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { releaseMonth, lastMonths, computeStats } from '../src/stats.js';
+import { releaseMonth, lastMonths, computeStats } from '../../backend/node/stats.js';
 
 const now = new Date('2026-11-12T10:00:00Z');
 const r = (o) => ({ wav_file: 'master.wav', on_youtube: 0, on_spotify: 0, video_file: null, yt_description: '', created_at: '2026-11-01 10:00:00', ...o });

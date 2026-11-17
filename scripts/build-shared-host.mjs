@@ -4,7 +4,7 @@
 // distantyouth/  the server code in PHP and, once it runs, your data: next to public_html, not in it
 import fs from 'node:fs';
 import path from 'node:path';
-import { writeZip } from '../src/zip.js';
+import { writeZip } from '../backend/node/zip.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
@@ -15,9 +15,9 @@ const copy = (from, to) => fs.cpSync(from, to, { recursive: true, filter: (s) =>
 const web = path.join(OUT, 'public_html');
 const app = path.join(OUT, 'distantyouth');
 
-copy(path.join(ROOT, 'public'), web);
-copy(path.join(ROOT, 'php', 'public', 'index.php'), path.join(web, 'index.php'));
-copy(path.join(ROOT, 'php', 'public', '.htaccess'), path.join(web, '.htaccess'));
+copy(path.join(ROOT, 'frontend'), web);
+copy(path.join(ROOT, 'backend', 'php', 'public_html', 'index.php'), path.join(web, 'index.php'));
+copy(path.join(ROOT, 'backend', 'php', 'public_html', '.htaccess'), path.join(web, '.htaccess'));
 // The fonts come from their packages (the Node.js server serves them from node_modules).
 for (const name of ['inter', 'montserrat']) {
   const src = path.join(ROOT, 'node_modules', '@fontsource-variable', name);
@@ -29,7 +29,7 @@ for (const name of ['inter', 'montserrat']) {
   copy(path.join(src, 'LICENSE'), path.join(dst, 'LICENSE'));
 }
 
-copy(path.join(ROOT, 'php', 'app'), path.join(app, 'app'));
+copy(path.join(ROOT, 'backend', 'php', 'app'), path.join(app, 'app'));
 fs.writeFileSync(path.join(app, 'VERSION'), version + '\n');
 fs.writeFileSync(path.join(app, '.htaccess'), '<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n');
 fs.writeFileSync(path.join(app, 'config.voorbeeld.php'), `<?php
@@ -46,7 +46,7 @@ return [
     'data_dir' => '',
 ];
 `);
-fs.copyFileSync(path.join(ROOT, 'php', 'LEESMIJ.txt'), path.join(OUT, 'LEESMIJ.txt'));
+fs.copyFileSync(path.join(ROOT, 'backend', 'php', 'LEESMIJ.txt'), path.join(OUT, 'LEESMIJ.txt'));
 
 // One ZIP of it all, to upload with the host's file manager and unpack there.
 const files = [];

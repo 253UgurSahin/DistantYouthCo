@@ -59,7 +59,7 @@ const BASE_URL = process.env.FORGE_BASE_URL || 'http://localhost:8080';
 const ROUND = (process.env.FORGE_ROUND || 'current').replace(/[^\w-]/g, '-');
 // forge-work/ is in the project root: one folder up when this runs from e2e/.
 const WORK = process.env.FORGE_WORK
-  || [path.resolve('forge-work'), path.resolve('..', 'forge-work')].find((dir) => fs.existsSync(dir))
+  || [path.resolve('forge-work'), path.resolve('..', 'forge-work'), path.resolve('..', '..', 'forge-work')].find((dir) => fs.existsSync(dir))
   || path.resolve('..', 'forge-work');
 const ROUTES_FILE = path.join(WORK, 'test', 'routes.json');
 const WALK_FILE = path.join(WORK, 'test', 'walk.json');

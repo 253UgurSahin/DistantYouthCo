@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Every route of src/app.js, with the same paths, answers and messages.
+// Every route of backend/node/app.js, with the same paths, answers and messages.
 
 function release_fields(array $b, ?array $existing): array {
     $title = text($b['title'] ?? null, 200, 'Titel');

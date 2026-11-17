@@ -1,6 +1,6 @@
 <?php
 // For testing with PHP's built-in server only (it does not read .htaccess):
-//   php -S 127.0.0.1:3200 -t <public_html> php/dev-router.php
+//   php -S 127.0.0.1:3200 -t <public_html> backend/php/dev-router.php
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if (preg_match('#^/(api|media|downloads)(/|$)#', $path)) {
     require $_SERVER['DOCUMENT_ROOT'] . '/index.php';

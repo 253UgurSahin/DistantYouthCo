@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 
 // The test passwords come from the git-ignored .env or forge-work/test/e2e.env, never from a command.
-for (const file of ['../.env', '../forge-work/test/e2e.env']) try {
+for (const file of ['../../.env', '../../forge-work/test/e2e.env']) try {
   const env = parseEnv(readFileSync(file, 'utf8'));
   for (const [k, v] of Object.entries(env)) if (k.startsWith('E2E_') && !process.env[k]) process.env[k] = v;
 } catch { /* not there: the signed-in tests are skipped */ }

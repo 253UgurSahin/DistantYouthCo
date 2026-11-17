@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// The YouTube kit and album names: the same rules and prompts as src/youtube.js, src/claude.js and
-// src/albumnames.js, so both servers write the same text.
+// The YouTube kit and album names: the same rules and prompts as backend/node/youtube.js, claude.js and
+// albumnames.js, so both servers write the same text.
 
 const YT_LIMITS = ['title' => 100, 'description' => 5000, 'tags' => 500];
 

@@ -10,7 +10,7 @@ const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dyc-test-'));
 process.env.DATA_DIR = dataDir;
 process.env.DYC_NO_FFMPEG = '1';
 delete process.env.ANTHROPIC_API_KEY;
-const { createApp } = await import('../src/app.js');
+const { createApp } = await import('../../backend/node/app.js');
 
 // Fresh passwords every run: nothing secret-looking lives in the code.
 const pw = () => crypto.randomBytes(12).toString('base64url');
@@ -73,11 +73,11 @@ test('first visit asks for the admin; setup works once', async () => {
 });
 
 test('the app tells its version as major.minor.patch, the one in package.json', async () => {
-  const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   const s = await new Client().req('GET', '/api/session');
   assert.equal(s.body.version, pkg.version);
-  assert.match(fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'), new RegExp(`^## ${pkg.version.replaceAll('.', '\\.')} `, 'm'), 'CHANGELOG.md has this version');
+  assert.match(fs.readFileSync(new URL('../../CHANGELOG.md', import.meta.url), 'utf8'), new RegExp(`^## ${pkg.version.replaceAll('.', '\\.')} `, 'm'), 'CHANGELOG.md has this version');
 });
 
 test('state-changing calls need the app header (CSRF guard)', async () => {
@@ -206,7 +206,7 @@ test('settings never send the API key back', async () => {
   assert.ok(!JSON.stringify(s.body).includes('sk-ant-example-key'), 'not from the server');
   assert.equal((await admin.req('PUT', '/api/settings', { spotify_artist_url: 'javascript:alert(1)' })).status, 400);
   // X002: what sits in the database is not the key itself.
-  const { db, getSettings } = await import('../src/db.js');
+  const { db, getSettings } = await import('../../backend/node/db.js');
   const raw = db.prepare("SELECT value FROM settings WHERE key = 'anthropic_api_key'").get().value;
   assert.ok(!raw.includes('sk-ant-example-key'), 'X002: the key is not stored as plain text');
   assert.match(raw, /^enc:v1:/);

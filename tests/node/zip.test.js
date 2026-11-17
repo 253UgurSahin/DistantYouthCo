@@ -6,7 +6,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { PassThrough, Writable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
-import { writeZip, safeName } from '../src/zip.js';
+import { writeZip, safeName } from '../../backend/node/zip.js';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dyc-zip-'));
 const a = path.join(dir, 'a.mp4');

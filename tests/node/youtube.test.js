@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseLyrics, findHookLine, extractBpm, styleTags, mergeHashtags, buildTagField, buildTitle,
   assembleDescription, templateParts, LIMITS,
-} from '../src/youtube.js';
+} from '../../backend/node/youtube.js';
 
 const settings = {
   artist_name: 'Distant Youth Co.',

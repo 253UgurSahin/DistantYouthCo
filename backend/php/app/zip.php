@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Streams a ZIP of stored videos, without packing it in memory or on disk first: the same format as
-// src/zip.js (stored, a data descriptor per file, ZIP64 records past 4 GB together).
+// backend/node/zip.js (stored, a data descriptor per file, ZIP64 records past 4 GB together).
 
 const ZIP_MAX32 = 0xffffffff;
 

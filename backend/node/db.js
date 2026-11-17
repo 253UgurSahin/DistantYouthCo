@@ -109,7 +109,7 @@ export function saveSettings(values) {
   }
 }
 
-// Settings that are secrets: sealed in the database (src/secretbox.js).
+// Settings that are secrets: sealed in the database (secretbox.js).
 const SECRET_KEYS = new Set(['anthropic_api_key']);
 
 // A key saved before sealing existed is sealed once, at start.

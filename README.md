@@ -5,6 +5,28 @@ titel, style-omschrijving en lyrics uploaden; luisteren zoals in een muziekapp; 
 YouTube-titel, -beschrijving en -tags maken in jouw vaste opmaak; bijhouden wat al op YouTube en
 Spotify staat; releases ordenen in collecties en playlists, en Claude een albumnaam laten voorstellen.
 
+## Zo zit het project in elkaar
+
+```
+frontend/          de schermen: HTML, CSS, JavaScript en plaatjes, voor beide servers hetzelfde
+backend/
+  node/            de server in Node.js (Docker, een VPS of je eigen computer)
+  php/             dezelfde server in PHP, voor shared hosting
+    app/           de code
+    public_html/   index.php en .htaccess: de deur naar de server op je host
+    LEESMIJ.txt    de installatiestappen voor je host
+tests/
+  node/            tests van de Node-server        npm test
+  php/             tests van de PHP-server         npm run test:php
+  e2e/             tests in de browser, voor beide npm run test:e2e
+scripts/           bouwen: de ZIP voor shared hosting, de iconen
+dist/              wat het bouwen oplevert (niet in git)
+data/              je database en bestanden bij de Node-server (niet in git)
+```
+
+Welke server je gebruikt, hangt af van je hosting: alles wat Node.js kan draaien (Docker, VPS) gebruikt
+`backend/node`, shared hosting gebruikt `backend/php`. De schermen zijn bij allebei dezelfde.
+
 ## Wat erin zit
 
 - **Releases**: WAV verplicht (de inhoud wordt gecontroleerd, niet alleen de naam), MP3, MP4 en cover
@@ -72,10 +94,13 @@ albumnamen kost een paar cent.
 ## Ontwikkelen
 
 ```bash
-npm run dev     # herstart bij elke wijziging
-npm test        # API- en beschrijvingstests
+npm run dev               # de Node-server, herstart bij elke wijziging
+npm test                  # tests van de Node-server
+npm run test:php          # tests van de PHP-server (bouwt eerst de ZIP-map)
+npm run test:e2e          # tests in de browser (zet FORGE_BASE_URL op de server die draait)
+npm run build:shared-host # de ZIP voor shared hosting in dist/
 node scripts/build-icons.mjs   # na het toevoegen van een Lucide-icoon
 ```
 
-Het ontwerp (concept "Maanfasen") staat in `public/css/tokens.css`; de iconen komen uit Lucide (ISC),
+Het ontwerp (concept "Maanfasen") staat in `frontend/css/tokens.css`; de iconen komen uit Lucide (ISC),
 de lettertypes Montserrat en Inter (SIL OFL) worden lokaal geserveerd, zonder externe CDN.

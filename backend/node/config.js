@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-export const ROOT_DIR = path.resolve(here, '..');
+// backend/node/ is two folders below the project root.
+export const ROOT_DIR = path.resolve(here, '..', '..');
 // The version as major.minor.patch (SemVer), from package.json: shown in the app, kept in CHANGELOG.md.
 export const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8')).version;
 export const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT_DIR, 'data'));
