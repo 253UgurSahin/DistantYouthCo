@@ -1,8 +1,60 @@
 import { el, icon, fmtTime } from './dom.js';
 import { pauseAudio } from './player.js';
 
+/** The id of a YouTube video from its link, as the server reads it (app/Support/Input.php), or null. */
+export function youtubeIdOf(link) {
+  let u;
+  try { u = new URL(String(link).trim()); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol)) return null;
+  const host = u.hostname.toLowerCase().replace(/^(www\.|m\.|music\.)/, '');
+  let id = null;
+  if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    id = u.pathname === '/watch' ? u.searchParams.get('v') : (u.pathname.match(/^\/(shorts|live|embed|v)\/([^/]+)/) || [])[2];
+  }
+  return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+}
+
+/** Does this release have a video to watch: its own MP4, or one on YouTube. */
+export const hasVideo = (r) => Boolean(r.video_url || r.youtube_id);
+
+/**
+ * YouTube's player (the privacy version, youtube-nocookie.com) for a release with a YouTube link.
+ * Only the video id from the server goes in. With autoplay the frame loads at once (you asked for
+ * the video); without, the cover shows first and YouTube is contacted only when you press play.
+ */
+export function youtubeFrame(r, { autoplay = false, start = 0 } = {}) {
+  const frame = () => {
+    pauseAudio();
+    const q = new URLSearchParams({ rel: '0', playsinline: '1', autoplay: '1' });
+    if (start > 1) q.set('start', String(Math.floor(start)));
+    return el('iframe', {
+      class: 'yt-frame',
+      src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(r.youtube_id)}?${q}`,
+      title: `${r.title} op YouTube`,
+      allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+      allowfullscreen: true,
+      // YouTube refuses to play without knowing which site it is on.
+      referrerpolicy: 'strict-origin-when-cross-origin',
+    });
+  };
+  const box = el('div', { class: 'video-box yt-box' });
+  if (autoplay) {
+    box.append(frame());
+    return box;
+  }
+  const facade = el('button', { type: 'button', class: 'yt-facade', 'aria-label': `Speelt af via YouTube: ${r.title}` },
+    r.cover_url ? el('img', { src: r.cover_url, alt: '' }) : null,
+    el('span', { class: 'vplay', 'aria-hidden': 'true' }, icon('play')),
+    el('span', { class: 'yt-note xs' }, 'Speelt af via YouTube'));
+  facade.addEventListener('click', () => box.replaceChildren(frame()));
+  box.append(facade);
+  return box;
+}
+
 /** A video player in the app's own style: a round play button, a thin position line, sound, full screen. */
 export function videoPlayer(r) {
+  if (!r.video_url && r.youtube_id) return youtubeFrame(r);
   const video = el('video', { src: r.video_url, preload: 'metadata', playsinline: true, poster: r.cover_url || undefined });
   const playBtn = el('button', { type: 'button', class: 'icon-btn solid' });
   const bigPlay = el('button', { type: 'button', class: 'vplay', 'aria-hidden': 'true', tabindex: '-1' }, icon('play'));

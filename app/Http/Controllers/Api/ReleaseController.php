@@ -176,6 +176,10 @@ class ReleaseController extends Controller
         foreach (['on_youtube', 'on_spotify'] as $key) {
             $out[$key] = $request->exists($key) ? Input::bool($request->input($key)) : (bool) ($existing?->$key ?? false);
         }
+        // A new link to the video on YouTube: it is on YouTube.
+        if ($out['youtube_url'] !== '' && $out['youtube_url'] !== $existing?->youtube_url && ! $request->exists('on_youtube')) {
+            $out['on_youtube'] = true;
+        }
 
         return $out;
     }

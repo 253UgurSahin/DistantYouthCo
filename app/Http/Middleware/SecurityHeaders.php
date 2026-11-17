@@ -6,14 +6,14 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** The same strict headers on every answer: no outside scripts, styles or frames. */
+/** The same strict headers on every answer: no outside scripts or styles; only YouTube's privacy player as a frame. */
 class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
         $h = $response->headers;
-        $h->set('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+        $h->set('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; frame-src https://www.youtube-nocookie.com; media-src 'self' blob:; style-src 'self'; script-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
         $h->set('X-Content-Type-Options', 'nosniff');
         $h->set('Referrer-Policy', 'same-origin');
         $h->set('X-Frame-Options', 'DENY');

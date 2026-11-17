@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\YoutubeKit;
+use App\Support\Input;
 use App\Services\ZipStream;
 use PHPUnit\Framework\TestCase;
 use ZipArchive;
@@ -59,5 +60,20 @@ class ZipStreamTest extends TestCase
         $this->assertSame(140, YoutubeKit::bpm('dubstep 140 BPM'));
         $this->assertNull(YoutubeKit::bpm('slow'));
         $this->assertSame(['#a', '#b'], array_slice(YoutubeKit::mergeHashtags(['a', '#A'], ['#b']), 0, 2));
+    }
+
+    public function test_the_video_id_from_every_kind_of_youtube_link(): void
+    {
+        foreach ([
+            'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'https://youtube.com/watch?feature=share&v=dQw4w9WgXcQ',
+            'https://m.youtube.com/watch?v=dQw4w9WgXcQ', 'https://youtu.be/dQw4w9WgXcQ?si=abc', 'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+            'https://www.youtube.com/live/dQw4w9WgXcQ', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', 'https://music.youtube.com/watch?v=dQw4w9WgXcQ',
+        ] as $url) {
+            $this->assertSame('dQw4w9WgXcQ', Input::youtubeId($url), $url);
+        }
+        foreach (['', 'https://www.youtube.com/@DistantYouthCo', 'https://youtu.be/kort', 'https://evil.com/watch?v=dQw4w9WgXcQ',
+            'https://youtube.com.evil.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ%22onload', 'https://www.youtube.com/watch?v[]=x'] as $url) {
+            $this->assertNull(Input::youtubeId($url), $url);
+        }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Release;
+use App\Support\Input;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,8 @@ class ReleaseResource extends JsonResource
             'folder_id' => $this->folder_id,
             'folder_name' => $this->folder?->name,
             'youtube_url' => $this->youtube_url,
+            // The video from YouTube, where there is no MP4 of its own (or as well as one).
+            'youtube_id' => Input::youtubeId($this->youtube_url),
             'spotify_url' => $this->spotify_url,
             'on_youtube' => $this->on_youtube,
             'on_spotify' => $this->on_spotify,

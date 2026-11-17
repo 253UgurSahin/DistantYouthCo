@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { player } from './player.js';
 import { isAdmin } from './session.js';
 import { standPanel } from './dashboard.js';
-import { videoPlayer } from './video.js';
+import { videoPlayer, hasVideo } from './video.js';
 import { coverEl, sectionHead, emptyState, releaseCard, collectionCard, playlistCard, trackRow, addToPlaylist, namesPanel } from './parts.js';
 
 
@@ -38,7 +38,7 @@ export async function homeView(query) {
           el('div', { class: 'label' }, 'Onderweg naar live'),
           el('div', { class: 'lean-row' }, moon(latest.on_spotify ? 'live' : 'none', 'lg'), `Spotify — ${latest.on_spotify ? 'live' : 'nog niet'}`),
           el('div', { class: 'lean-row' }, moon(latest.youtube_state, 'lg'), `YouTube — ${YT_WORDS[latest.youtube_state]}`),
-          el('div', { class: 'lean-row' }, moon(latest.has.video ? 'live' : 'none', 'lg'), `Video — ${latest.has.video ? 'klaar' : 'nog niet geüpload'}`)))));
+          el('div', { class: 'lean-row' }, moon(hasVideo(latest) ? 'live' : 'none', 'lg'), `Video — ${latest.has.video ? 'klaar' : latest.youtube_id ? 'op YouTube' : 'nog niet geüpload'}`)))));
   } else {
     front.append(el('div', { class: 'wrap' }, el('div', { class: 'hero-copy', 'data-depth-layer': '1' },
       el('div', { class: 'label' }, 'Distant Youth Studio'),
@@ -133,7 +133,7 @@ export async function releaseView(id) {
       el('div', { class: 'phone-status rise', style: { '--i': '3' }, 'aria-hidden': 'true' }, moon(r.status), STATUS_WORDS[r.status]),
       el('div', { class: 'row rise', style: { '--i': '4' } },
         r.audio_url ? el('button', { type: 'button', class: 'btn primary lg', onclick: () => player.play(r) }, icon('play', 'sm'), 'Afspelen') : null,
-        r.video_url ? el('button', { type: 'button', class: 'btn subtle lg', onclick: () => player.openVideo(r) }, icon('video', 'sm'), 'Video') : null,
+        hasVideo(r) ? el('button', { type: 'button', class: 'btn subtle lg', onclick: () => player.openVideo(r) }, icon('video', 'sm'), 'Video') : null,
         el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Aan playlist toevoegen', onclick: () => addToPlaylist(r).catch((e) => toast(e.message, 'error')) }, icon('plus', 'sm')),
         el('span', { class: 'spacer' }),
         admin ? el('a', { class: 'btn subtle lg', href: `#/release/${r.id}/youtube` }, 'YouTube-kit') : null,
@@ -154,7 +154,7 @@ export async function releaseView(id) {
       : el('p', {}, 'Geen lyrics — instrumentaal of nog niet ingevuld.'));
 
   const side = el('div', { class: 'side-col' });
-  if (r.video_url) {
+  if (hasVideo(r)) {
     side.append(el('section', { class: 'stack', style: { gap: '12px' }, 'aria-labelledby': 'vid-h' },
       el('h2', { id: 'vid-h', class: 'label' }, r.video_type || 'Video'),
       videoPlayer(r)));
@@ -309,7 +309,7 @@ export { STATUS_WORDS };
 // ---------- Te doen: the next step of every release that is not live yet ----------
 
 function nextStep(r) {
-  if (!r.has.video) return { what: 'Video uploaden', href: `#/release/${r.id}/bewerken`, ic: 'upload' };
+  if (!r.has.video && !r.youtube_id) return { what: 'Video uploaden', href: `#/release/${r.id}/bewerken`, ic: 'upload' };
   if (!r.yt_description) return { what: 'YouTube-tekst maken', href: `#/release/${r.id}/youtube?generate=1`, ic: 'message-square-text' };
   if (!r.on_youtube) return { what: 'Op YouTube zetten', href: `#/release/${r.id}/youtube`, ic: 'clapperboard' };
   return null;

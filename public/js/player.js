@@ -1,4 +1,5 @@
 import { el, icon, clear, fmtTime, hookLine, dialog, toast } from './dom.js';
+import { hasVideo, youtubeFrame } from './video.js';
 
 const audio = new Audio();
 audio.preload = 'metadata';
@@ -168,7 +169,7 @@ function build() {
     el('div', { class: 'seek' }, parts.time, parts.seek, parts.total),
     el('div', { class: 'extra' },
       el('a', { class: 'icon-btn plain', href: `#/release/${r.id}`, 'aria-label': 'Lyrics' }, icon('message-square-text', 'sm')),
-      r.video_url ? el('button', { class: 'icon-btn plain', type: 'button', 'aria-label': 'Video bekijken', onclick: () => openVideo(r) }, icon('video', 'sm')) : null,
+      hasVideo(r) ? el('button', { class: 'icon-btn plain', type: 'button', 'aria-label': 'Video bekijken', onclick: () => openVideo(r) }, icon('video', 'sm')) : null,
       el('button', { class: 'icon-btn plain vol-btn', type: 'button', 'aria-label': audio.muted ? 'Geluid aan' : 'Geluid uit', onclick: (e) => { audio.muted = !audio.muted; e.currentTarget.replaceChildren(icon(audio.muted ? 'volume-x' : 'volume-2', 'sm')); } }, icon(audio.muted ? 'volume-x' : 'volume-2', 'sm')),
       vol),
     parts.error);
@@ -200,7 +201,11 @@ function openFull() {
   const media = el('div');
   const showMedia = () => {
     clear(media);
-    if (mode === 'video' && r.video_url) {
+    if (mode === 'video' && !r.video_url && r.youtube_id) {
+      const start = audio.currentTime;
+      audio.pause();
+      media.append(youtubeFrame(r, { autoplay: true, start }));
+    } else if (mode === 'video' && r.video_url) {
       const v = el('video', { src: r.video_url, controls: true, playsinline: true, poster: r.cover_url || undefined });
       v.currentTime = audio.currentTime;
       audio.pause();
@@ -229,7 +234,7 @@ function openFull() {
       el('div', { class: 'grow' }, el('span', { class: 'label' }, r.folder_name ? 'Speelt uit collectie' : 'Speelt nu'), el('span', { class: 'title' }, r.folder_name || 'Distant Youth Studio')),
       el('a', { class: 'icon-btn', href: `#/release/${r.id}`, 'aria-label': 'Naar de release', onclick: close }, icon('ellipsis'))),
     media,
-    r.video_url ? el('div', { class: 'seg', role: 'group', 'aria-label': 'Weergave', style: { alignSelf: 'center' } }, segBtn('audio', 'Audio'), segBtn('video', 'Video')) : null,
+    hasVideo(r) ? el('div', { class: 'seg', role: 'group', 'aria-label': 'Weergave', style: { alignSelf: 'center' } }, segBtn('audio', 'Audio'), segBtn('video', 'Video')) : null,
     el('div', {}, el('div', { class: 'h-xl' }, r.title), el('div', { class: 'muted small' }, 'Distant Youth Co.')),
     el('div', { class: 'stack', style: { gap: '4px' } }, set.seek, el('div', { class: 'row xs muted', style: { justifyContent: 'space-between' } }, set.time, set.total)),
     el('div', { class: 'big-controls' },
@@ -251,10 +256,18 @@ function openFull() {
 // ---------- video ----------
 
 function openVideo(r) {
-  if (!r.video_url) return;
+  if (!hasVideo(r)) return;
   const wasPlaying = player.current?.id === r.id && !audio.paused;
   const start = player.current?.id === r.id ? audio.currentTime : 0;
   audio.pause();
+  if (!r.video_url) {
+    // From YouTube: its own player, from where the music was. The music stays paused after.
+    dialog((close) => el('div', { class: 'stack' },
+      el('div', { class: 'row' }, el('span', { class: 'title' }, r.title), el('span', { class: 'spacer' }),
+        el('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Video sluiten', onclick: () => close() }, icon('x'))),
+      youtubeFrame(r, { autoplay: true, start })), 'video');
+    return;
+  }
   let video;
   dialog((close) => {
     video = el('video', { src: r.video_url, controls: true, playsinline: true, poster: r.cover_url || undefined, style: { width: '100%' } });

@@ -48,6 +48,31 @@ final class Input
         return $v;
     }
 
+    /**
+     * The id of a YouTube video from its link (watch, youtu.be, shorts, live, embed), or null.
+     * Only this id goes into the player, never the link itself.
+     */
+    public static function youtubeId(?string $url): ?string
+    {
+        $p = parse_url((string) $url);
+        $host = strtolower((string) ($p['host'] ?? ''));
+        $host = preg_replace('/^(www\.|m\.|music\.)/', '', $host);
+        $path = (string) ($p['path'] ?? '');
+        $id = null;
+        if ($host === 'youtu.be') {
+            $id = explode('/', ltrim($path, '/'))[0];
+        } elseif (in_array($host, ['youtube.com', 'youtube-nocookie.com'], true)) {
+            if ($path === '/watch') {
+                parse_str((string) ($p['query'] ?? ''), $q);
+                $id = is_string($q['v'] ?? null) ? $q['v'] : null;
+            } elseif (preg_match('~^/(shorts|live|embed|v)/([^/]+)~', $path, $m)) {
+                $id = $m[2];
+            }
+        }
+
+        return is_string($id) && preg_match('/^[A-Za-z0-9_-]{11}$/', $id) ? $id : null;
+    }
+
     public static function urlOrEmpty(mixed $v, string $name): string
     {
         $s = self::text($v, 500, $name);

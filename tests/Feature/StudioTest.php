@@ -132,4 +132,22 @@ class StudioTest extends TestCase
         $this->assertSame('Europe/Amsterdam', $s['time_zone']);
         $this->getJson('/api/stats?months=7')->assertStatus(400);
     }
+
+    public function test_a_youtube_link_stands_in_for_the_mp4(): void
+    {
+        $this->actingAs($this->admin());
+        $r = $this->app_()->post('/api/releases', ['title' => 'Alleen op YouTube', 'youtube_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42', 'wav' => self::file('a.wav', self::wav())], ['Accept' => 'application/json'])
+            ->assertCreated()->json('release');
+        $this->assertSame('dQw4w9WgXcQ', $r['youtube_id']);
+        $this->assertNull($r['video_url']);
+        $this->assertTrue($r['on_youtube'], 'a link to the video means it is on YouTube');
+        $this->assertSame('live', $r['status']);
+        // Any link is kept as it was in 2.0 (a channel, a playlist), but only a video plays in the app.
+        $this->app_()->postJson("/api/releases/{$r['id']}/status", ['youtube_url' => 'https://www.youtube.com/@DistantYouthCo'])->assertOk()->assertJsonPath('release.youtube_id', null);
+        $this->app_()->postJson("/api/releases/{$r['id']}/status", ['youtube_url' => 'javascript:alert(1)'])->assertStatus(400);
+        $this->app_()->postJson("/api/releases/{$r['id']}/status", ['youtube_url' => 'https://youtu.be/abcdefghijk'])->assertOk()->assertJsonPath('release.youtube_id', 'abcdefghijk');
+        $csp = $this->get('/')->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString('frame-src https://www.youtube-nocookie.com;', $csp);
+        $this->assertStringNotContainsString('frame-src *', $csp);
+    }
 }

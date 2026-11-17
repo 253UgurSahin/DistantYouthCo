@@ -767,3 +767,30 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
   .cover.big[data-depth], .stacked .cover { rotate: none; }
   .hero-front .lean { rotate: none; translate: none; }
 }
+
+/* A video from YouTube: the cover first, YouTube's own player after you press play. */
+.yt-box { position: relative; aspect-ratio: 16 / 9; }
+.yt-frame { display: block; width: 100%; height: 100%; aspect-ratio: 16 / 9; border: 0; }
+.yt-facade { all: unset; box-sizing: border-box; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--color-photo-scrim); }
+.yt-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
+.yt-facade:focus-visible { outline: var(--size-ring) solid var(--color-on-photo); outline-offset: -6px; }
+.yt-facade:hover .vplay { transform: scale(1.06); }
+.yt-note { position: absolute; left: var(--space-3); bottom: var(--space-3); color: var(--color-on-photo); opacity: .85; }
+.full-player .yt-box { border-radius: var(--radius-md); overflow: hidden; }
+
+/* Several releases at once */
+.bulk-drop { flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-6); }
+.bulk-drop .slot-text { flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px; }
+.bulk-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.bulk-list:empty { display: none; }
+.bulk-row { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface); border: var(--size-border) solid var(--color-border); }
+.bulk-row.done { border-color: var(--color-text-muted); }
+.bulk-row.error { border-color: var(--color-danger); }
+.bulk-head { display: flex; align-items: center; gap: var(--space-2); }
+.bulk-head .grow { flex: 1 1 auto; min-width: 0; }
+.bulk-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.bulk-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; border: var(--size-border) solid var(--color-border); font-size: 13px; }
+.bulk-chip b { font-weight: 600; }
+.bulk-chip .icon-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; }
+.bulk-warn, .bulk-ok { display: inline-flex; align-items: center; gap: 6px; }
+.bulk-warn { color: var(--color-text-muted); }

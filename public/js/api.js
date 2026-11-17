@@ -98,3 +98,24 @@ export async function uploadInChunks(file, chunkSize, onProgress) {
   return token;
 }
 
+
+/**
+ * A release form with its files ({ wav: File, video: File, ... }): on a host with a small upload
+ * limit (chunkSize > 0) every file goes up in pieces first and the form names them; otherwise the
+ * files go in the form. onProgress gets 0..1 over all of it.
+ */
+export async function sendRelease(path, method, fd, files, chunkSize, onProgress) {
+  if (chunkSize) {
+    const list = Object.entries(files);
+    const total = list.reduce((n, [, f]) => n + f.size, 0) || 1;
+    let done = 0;
+    for (const [k, f] of list) {
+      const token = await uploadInChunks(f, chunkSize, (p) => onProgress?.((done + p * f.size) / total));
+      done += f.size;
+      fd.append(`${k}_upload`, token);
+    }
+    return upload(path, method, fd, null);
+  }
+  for (const [k, f] of Object.entries(files)) fd.append(k, f);
+  return upload(path, method, fd, onProgress);
+}

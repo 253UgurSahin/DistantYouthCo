@@ -1,7 +1,8 @@
 import { el, icon, moon, parseLyrics, styleFacts, toast, confirmDialog, formDialog, copyText, YT_WORDS } from './dom.js';
-import { api, upload, uploadInChunks } from './api.js';
+import { api, sendRelease } from './api.js';
 import { session, isAdmin } from './session.js';
 import { coverEl } from './parts.js';
+import { youtubeIdOf } from './video.js';
 
 const fail = (e) => toast(e.message, 'error');
 const field = (id, label, input, hint) =>
@@ -33,7 +34,7 @@ export async function editView(id) {
   // The title's moon waxes as files are added: new, crescent, gibbous, full.
   const titleMoon = el('span', { class: 'title-moon' });
   const drawMoon = () => {
-    const n = SLOTS.filter((s) => files[s.kind] || (r.has?.[s.kind] && !removed[s.kind])).length;
+    const n = SLOTS.filter((s) => files[s.kind] || (r.has?.[s.kind] && !removed[s.kind]) || (s.kind === 'video' && ytLink?.value.trim())).length;
     titleMoon.replaceChildren(moon(n === 0 ? 'none' : n >= SLOTS.length ? 'live' : n === 1 ? 'ready' : 'gibbous', 'xl'));
   };
   const slot = (s) => {
@@ -83,6 +84,10 @@ export async function editView(id) {
     return node;
   };
 
+  // A video already on YouTube can stand in for the MP4: the app plays it from YouTube.
+  const ytLink = el('input', { class: 'input', id: 'u-yt', type: 'url', inputmode: 'url', value: r.youtube_url || '', placeholder: 'https://youtu.be/…', 'aria-describedby': 'u-yt-hint', maxlength: 500 });
+  ytLink.addEventListener('input', () => { ytLink.removeAttribute('aria-invalid'); drawMoon(); });
+
   const title = el('input', { class: 'input lg', id: 'u-title', value: r.title || '', required: true, maxlength: 200, autocomplete: 'off' });
   const style = el('textarea', { class: 'textarea', id: 'u-style', rows: 3, value: r.style || '', maxlength: 4000, 'aria-describedby': 'u-style-hint' });
   const lyrics = el('textarea', { class: 'textarea', id: 'u-lyrics', rows: 14, value: r.lyrics || '', maxlength: 20000, placeholder: '[Intro]\n…\n\n[Verse 1]\n…\n\n[Chorus]\n…', 'aria-describedby': 'u-lyrics-hint' });
@@ -116,6 +121,13 @@ export async function editView(id) {
       errorBox.replaceChildren(el('p', { class: 'error-text' }, icon('circle-alert', 'sm'), 'Geef de release een titel.'));
       return;
     }
+    const link = ytLink.value.trim();
+    if (link && link !== (r.youtube_url || '') && !youtubeIdOf(link)) {
+      ytLink.setAttribute('aria-invalid', 'true');
+      ytLink.focus();
+      errorBox.replaceChildren(el('p', { class: 'error-text' }, icon('circle-alert', 'sm'), 'Dit is geen link naar een YouTube-video. Plak de link van de video zelf, bijvoorbeeld https://youtu.be/…'));
+      return;
+    }
     if (!id && !files.wav) {
       slotEls.wav.node.classList.add('invalid');
       errorBox.replaceChildren(el('p', { class: 'error-text' }, icon('circle-alert', 'sm'), 'Een WAV-bestand is verplicht.'));
@@ -131,26 +143,14 @@ export async function editView(id) {
     fd.append('video_type', vtype.value);
     fd.append('hidden', hidden.checked ? '1' : '0');
     fd.append('notes', notes.value);
+    fd.append('youtube_url', ytLink.value.trim());
     for (const k of Object.keys(removed)) fd.append(`remove_${k}`, '1');
     for (const b of buttons.querySelectorAll('button')) b.disabled = true;
     const showBars = Object.keys(files).length > 0;
     for (const b of bars) b.hidden = !showBars;
     const setBars = (p) => { for (const b of bars) b.firstChild.style.width = `${Math.round(p * 100)}%`; };
     try {
-      if (session.uploadChunk) {
-        // A host with a small upload limit: every file goes up in pieces first, the form then names them.
-        const list = Object.entries(files);
-        const total = list.reduce((n, [, f]) => n + f.size, 0) || 1;
-        let done = 0;
-        for (const [k, f] of list) {
-          const token = await uploadInChunks(f, session.uploadChunk, (p) => setBars((done + p * f.size) / total));
-          done += f.size;
-          fd.append(`${k}_upload`, token);
-        }
-      } else {
-        for (const [k, f] of Object.entries(files)) fd.append(k, f);
-      }
-      const res = await upload(id ? `/releases/${id}` : '/releases', id ? 'PUT' : 'POST', fd, session.uploadChunk ? null : setBars);
+      const res = await sendRelease(id ? `/releases/${id}` : '/releases', id ? 'PUT' : 'POST', fd, files, session.uploadChunk, setBars);
       toast(id ? 'Opgeslagen' : 'Release aangemaakt');
       location.hash = thenKit ? `#/release/${res.release.id}/youtube?generate=1` : `#/release/${res.release.id}`;
     } catch (e) {
@@ -179,7 +179,9 @@ export async function editView(id) {
       el('p', { class: 'muted', style: { margin: '6px 0 0' } }, 'Alleen de WAV en een titel zijn verplicht. De rest kun je later aanvullen.')),
     el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(false); } },
       el('section', { class: 'side-col sticky-col', 'aria-labelledby': 'files-h' }, el('h2', { id: 'files-h', class: 'label' }, 'Bestanden'), SLOTS.map(slot),
-        el('p', { class: 'hint' }, 'Bestanden worden gecontroleerd op hun echte inhoud, niet alleen op de naam.')),
+        field('u-yt', 'Of een YouTube-link in plaats van de MP4', ytLink, 'Staat de video al op YouTube? Plak de link: de app speelt hem dan af via YouTube.'),
+        el('p', { class: 'hint' }, 'Bestanden worden gecontroleerd op hun echte inhoud, niet alleen op de naam.'),
+        id ? null : el('a', { href: '#/meerdere', class: 'btn subtle sm', style: { alignSelf: 'flex-start' } }, icon('files', 'sm'), 'Meerdere releases tegelijk')),
       el('section', { class: 'main-col stack', 'aria-labelledby': 'info-h', style: { gap: 'var(--space-6)' } },
         el('h2', { id: 'info-h', class: 'label' }, 'Info'),
         field('u-title', 'Titel', title),
@@ -300,7 +302,7 @@ export async function youtubeView(id, query) {
   const [step1, step2, step3, step4] = [1, 2, 3, 4].map(() => el('span', { class: 'step-nr' }));
   const ytMoon = el('span', { class: 'title-moon' });
   const drawSteps = () => {
-    const done = [r.has.video, Boolean(r.yt_description), Boolean(r.on_youtube), Boolean(r.on_youtube)];
+    const done = [r.has.video || Boolean(r.youtube_id), Boolean(r.yt_description), Boolean(r.on_youtube), Boolean(r.on_youtube)];
     const next = done.indexOf(false);
     [step1, step2, step3, step4].forEach((node, i) => {
       node.className = `step-nr${done[i] ? ' done' : i === next ? ' next' : ''}`;
