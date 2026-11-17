@@ -8,6 +8,17 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in het bestand `VERSION`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 2.1.0 (2026-11-17)
+Nieuw
+- Meerdere releases tegelijk uploaden (Nieuwe release → "Meerdere releases tegelijk"): sleep al je bestanden in één keer erin. Elke WAV wordt een release; een MP4, MP3 of cover met dezelfde naam gaat er vanzelf bij. De titels komen uit de bestandsnamen en kun je nog aanpassen; collectie, video-type en concept stel je voor allemaal tegelijk in. Gaat er één mis, dan gaan de andere gewoon door.
+- Een YouTube-link in plaats van de MP4: staat je video al op YouTube, plak dan de link bij de release. De app speelt hem af via YouTube, op de release-pagina en in de speler. YouTube laadt pas als je op afspelen drukt.
+
+Beter
+- Een release met een YouTube-link telt als "op YouTube" en staat niet meer bij Te doen als "Video uploaden".
+
+Beveiliging
+- Alleen de video-code uit de link gaat naar de YouTube-speler (de privacyversie, youtube-nocookie.com); de app laat geen andere ingesloten pagina's toe.
+
 ## 2.0.0 (2026-11-17)
 Anders
 - De app is opnieuw gebouwd op Laravel 12 (PHP 8.2 of nieuwer), met de gewone Laravel-mappen: één server voor shared hosting, Docker en je eigen computer. De Node.js-server en de losse PHP-versie zijn weg.
