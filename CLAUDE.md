@@ -11,6 +11,9 @@ Bij elke versie, in één commit `release: vX.Y.Z`:
 2. een blok bovenaan in `CHANGELOG.md` (Nederlands, in gewone woorden: Nieuw / Beter / Reparaties / Beveiliging);
 3. een annotated git-tag `vX.Y.Z` op die commit. Pushen (ook van tags) alleen als de gebruiker het vraagt.
 
+Branches heten naar hun versie: het werk voor een versie gebeurt op `release/vX.Y.Z` (niet `vX.Y.Z`:
+die naam heeft de tag al). Na de release gaat die branch met een fast-forward in `main`.
+
 De app toont de versie (`/api/session` geeft `version`, uit `VERSION` via `config/studio.php`).
 
 ## Mappen: een Laravel 12-app
