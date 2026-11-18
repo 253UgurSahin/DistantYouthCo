@@ -40,6 +40,8 @@ VERSION                het versienummer (major.minor.patch)
   kopieerknoppen. Met een Claude API key schrijft Claude het verhaal zoals in je voorbeeld
   ("Lanterns in the Rain"); zonder key vult een template de vaste delen in. Spotify-link,
   AI-vermelding en standaard-hashtags stel je één keer in bij **Instellingen**.
+- **Direct naar YouTube**: koppel je kanaal één keer en upload de MP4 met de tekst uit de kit en je
+  cover als thumbnail rechtstreeks vanuit de app. Zie [Direct uploaden naar YouTube](#direct-uploaden-naar-youtube).
 - **Status als maanfase**: nieuw = concept, wassend = klaar voor YouTube, vol = live.
 - **Speler**: wachtrij, video, lyrics, vergrendelscherm-bediening; op de telefoon een volledig scherm.
 - **Collecties** (albums, EP's, reeksen; jij beheert ze) en **playlists** (iedereen maakt eigen
@@ -84,6 +86,46 @@ php artisan serve
 
 Zet de app achter HTTPS. De inlogcookie wordt dan vanzelf Secure. Staat er een proxy voor
 (Cloudflare, Nginx), zet dan `TRUST_PROXY=1` in `.env`.
+
+## Direct uploaden naar YouTube
+
+Met je kanaal gekoppeld upload je een release vanuit de YouTube-kit rechtstreeks naar YouTube. Je kiest
+privé, verborgen, openbaar of een moment waarop hij live gaat. De video gaat erop met de titel,
+beschrijving en tags uit de kit, in de categorie Muziek, als "niet voor kinderen", en desgewenst met
+het AI-label van YouTube. Je cover wordt de thumbnail (JPG of PNG, max 2 MB). Daarna staat de link bij
+de release, en zodra de video openbaar is, springt de maan op vol.
+
+De upload gaat in stukjes van 8 MB, één per verzoek, zodat de tijdslimiet van een shared host hem niet
+afbreekt. Valt de verbinding even weg, dan gaat hij verder waar YouTube was. Laat de pagina open tot
+het klaar is; ga je toch weg, dan staat er bij terugkomst "Verder uploaden". Een release heeft wel een
+eigen MP4 nodig: met alleen een YouTube-link valt er niets te uploaden.
+
+Eenmalig instellen (in je eigen Google-account, gratis):
+
+1. Maak een project in [Google Cloud](https://console.cloud.google.com/projectcreate) en zet de
+   [YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com) aan.
+2. Stel het [OAuth-toestemmingsscherm](https://console.cloud.google.com/apis/credentials/consent) in:
+   type extern, met jezelf als testgebruiker. Zet het daarna op **In productie**; in de testfase vervalt
+   de koppeling na 7 dagen. Google waarschuwt dan dat de app niet geverifieerd is: voor je eigen
+   gebruik klik je die weg via "Geavanceerd".
+3. Maak bij [Inloggegevens](https://console.cloud.google.com/apis/credentials) een OAuth-client-ID van
+   het type **Webapplicatie**. Zet bij "Geautoriseerde omleidings-URI's" precies het adres dat de app
+   bij **Instellingen → YouTube-kanaal** toont (`https://jouwdomein/oauth/youtube/callback`).
+4. Plak de Client ID en het Client secret bij **Instellingen** (of zet `YOUTUBE_CLIENT_ID` en
+   `YOUTUBE_CLIENT_SECRET` in `.env`) en klik op **Koppel YouTube-kanaal**.
+
+Goed om te weten:
+
+- **Audit.** Video's die je via een eigen, nog niet goedgekeurd Google-project uploadt, zet YouTube
+  vast op privé. Vraag de [audit](https://support.google.com/youtube/contact/yt_api_form) aan om dat op
+  te heffen; tot dan werkt alles, maar blijven je uploads privé.
+- **Quotum.** Je project krijgt per dag een vast aantal API-punten; een upload kost er veel. Voor een
+  paar releases per dag is het genoeg. Het gaat rond middernacht (Amerikaanse westkusttijd) opnieuw in.
+- **Eigen thumbnail.** Mag pas als je kanaal geverifieerd is met je telefoonnummer (youtube.com/verify).
+  Lukt het niet, dan staat de video er toch en zegt de app waarom de thumbnail ontbreekt.
+- **Rechten.** De app vraagt alleen om uploaden en meelezen (`youtube.upload`, `youtube.readonly`),
+  niet om video's te wijzigen of te verwijderen. Ontkoppelen trekt de toegang bij Google in.
+- **Achter een proxy.** Zet `TRUST_PROXY=1`, zodat de omleidings-URI met `https://` en je eigen domein begint.
 
 ## Claude
 
