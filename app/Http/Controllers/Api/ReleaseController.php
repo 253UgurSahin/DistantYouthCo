@@ -194,25 +194,27 @@ class ReleaseController extends Controller
 
     private function fields(Request $request, ?Release $existing): array
     {
-        $title = Input::text($request->input('title'), 200, 'Titel');
+        // A change keeps what it does not send ("Aanvullen" sends only style and lyrics); a new release starts empty.
+        $keep = fn (string $key) => $existing !== null && ! $request->exists($key);
+        $title = $keep('title') ? $existing->title : Input::text($request->input('title'), 200, 'Titel');
         if ($title === '') {
             throw ApiError::bad('Geef de release een titel.');
         }
-        $style = Input::text($request->input('style'), 4000, 'Style-omschrijving');
-        $folder = Input::intOrNull($request->input('folder_id'), 1, PHP_INT_MAX, 'Map');
+        $style = $keep('style') ? (string) $existing->style : Input::text($request->input('style'), 4000, 'Style-omschrijving');
+        $folder = $keep('folder_id') ? $existing->folder_id : Input::intOrNull($request->input('folder_id'), 1, PHP_INT_MAX, 'Map');
         if ($folder !== null && ! Folder::whereKey($folder)->exists()) {
             throw ApiError::bad('Die collectie bestaat niet.');
         }
         $out = [
             'title' => $title,
             'style' => $style,
-            'lyrics' => Input::text($request->input('lyrics'), 20000, 'Lyrics'),
-            'bpm' => Input::intOrNull($request->input('bpm'), 40, 300, 'BPM') ?? YoutubeKit::bpm($style),
-            'release_date' => Input::dateOrNull($request->input('release_date')),
-            'video_type' => Input::text($request->input('video_type'), 60, 'Video-type') ?: Setting::current()['default_video_type'],
+            'lyrics' => $keep('lyrics') ? (string) $existing->lyrics : Input::text($request->input('lyrics'), 20000, 'Lyrics'),
+            'bpm' => ($keep('bpm') ? $existing->bpm : Input::intOrNull($request->input('bpm'), 40, 300, 'BPM')) ?? YoutubeKit::bpm($style),
+            'release_date' => $keep('release_date') ? $existing->release_date : Input::dateOrNull($request->input('release_date')),
+            'video_type' => ($keep('video_type') ? $existing->video_type : Input::text($request->input('video_type'), 60, 'Video-type')) ?: Setting::current()['default_video_type'],
             'folder_id' => $folder,
-            'is_hidden' => Input::bool($request->input('hidden')),
-            'notes' => Input::text($request->input('notes'), 4000, 'Notities'),
+            'is_hidden' => $keep('hidden') ? (bool) $existing->is_hidden : Input::bool($request->input('hidden')),
+            'notes' => $keep('notes') ? (string) $existing->notes : Input::text($request->input('notes'), 4000, 'Notities'),
         ];
         foreach (['youtube_url' => 'YouTube-link', 'spotify_url' => 'Spotify-link'] as $key => $name) {
             $out[$key] = $request->exists($key) ? Input::urlOrEmpty($request->input($key), $name) : ($existing?->$key ?? '');

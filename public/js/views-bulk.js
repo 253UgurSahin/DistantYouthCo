@@ -150,8 +150,14 @@ export async function bulkView() {
     go.lastChild.textContent = busy ? 'Bezig…' : todo.length > 1 ? `Upload ${todo.length} releases` : 'Upload 1 release';
     if (!todo.length && !busy) go.lastChild.textContent = 'Uploaden';
     doneLink.hidden = busy || !done;
+    const doneIds = groups.filter((g) => g.state === 'done').map((g) => g.id);
+    fillLink.hidden = busy || !doneIds.length;
+    fillLink.href = `#/aanvullen?ids=${doneIds.join(',')}`;
+    go.hidden = !busy && !todo.length && doneIds.length > 0;
   };
   const doneLink = el('a', { class: 'btn subtle lg', href: '#/', hidden: true }, 'Naar de releases');
+  // Next step after uploading: style and lyrics, one release after another.
+  const fillLink = el('a', { class: 'btn primary lg', hidden: true }, icon('wand-sparkles', 'sm'), 'Style en lyrics aanvullen');
 
   const leaveGuard = (e) => { e.preventDefault(); e.returnValue = ''; };
   go.addEventListener('click', async () => {
@@ -212,5 +218,5 @@ export async function bulkView() {
         el('h2', { id: 'bulk-all-h', class: 'label' }, 'Voor allemaal'),
         shared,
         el('label', { class: 'check', for: 'b-hidden' }, hidden, 'Concept — verbergen voor luisteraar-accounts')),
-      el('div', { class: 'form-actions' }, el('span', { class: 'spacer' }), doneLink, go)));
+      el('div', { class: 'form-actions' }, el('span', { class: 'spacer' }), doneLink, fillLink, go)));
 }

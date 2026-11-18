@@ -41,6 +41,37 @@ test.describe('as admin', () => {
   });
 });
 
+test.describe('as admin, filling in', () => {
+  test.use({ storageState: AUTH.admin });
+
+  test('U003 Aanvullen walks through releases without style or lyrics, and keeps everything else', async ({ page }) => {
+    const n = Date.now();
+    const ids: number[] = [];
+    for (const t of [`Kaal ${n} A`, `Kaal ${n} B`]) {
+      const res = await page.request.post('/api/releases', { headers: { 'X-Requested-With': 'dyc' }, multipart: { title: t, hidden: '1', notes: 'privé', wav: { name: 'a.wav', mimeType: 'audio/wav', buffer: smallWav() } } });
+      ids.push((await res.json()).release.id);
+    }
+    await page.goto(`/#/aanvullen?ids=${ids.join(',')}`);
+    await expectAccessible(page);
+    await expect(page.getByText('1 van 2')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: `Kaal ${n} B` })).toBeVisible(); // newest first
+    await expect(page.getByLabel('Style-omschrijving')).toBeFocused();
+    await page.getByLabel('Style-omschrijving').fill('melodic dubstep, 150 bpm, koto');
+    await expect(page.getByText(/Herkend: .*150 BPM/i)).toBeVisible();
+    await page.getByLabel('Lyrics').fill('[Chorus]\nLicht in de nacht');
+    await page.getByRole('button', { name: 'Opslaan en volgende' }).click();
+    await expect(page.getByText('2 van 2')).toBeVisible();
+    await page.getByRole('button', { name: 'Overslaan' }).click();
+    await expect(page.getByText('Klaar: 1 van 2 aangevuld.')).toBeVisible();
+    const b = (await (await apiAs(page, 'GET', `/releases/${ids[1]}`)).json()).release;
+    expect([b.style, b.lyrics, b.bpm, b.hidden, b.notes]).toEqual(['melodic dubstep, 150 bpm, koto', '[Chorus]\nLicht in de nacht', 150, true, 'privé']);
+    expect(b.yt_description).toContain('150 BPM');
+    // Home points there while some are bare.
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: /zonder style of lyrics: aanvullen/ })).toHaveAttribute('href', '#/aanvullen');
+  });
+});
+
 test.describe('as admin, deleting', () => {
   test.use({ storageState: AUTH.admin });
 

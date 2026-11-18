@@ -212,4 +212,15 @@ class ReleaseTest extends TestCase
         $this->getJson("/api/releases/$new")->assertJson(['neighbours' => ['previous' => null, 'next' => ['id' => $old, 'title' => 'Oud']]]);
         $this->getJson("/api/releases/$old")->assertJsonPath('neighbours.previous.id', $new)->assertJsonPath('neighbours.next', null);
     }
+
+    public function test_a_change_that_sends_only_style_and_lyrics_keeps_the_rest(): void
+    {
+        $this->actingAs($this->admin());
+        $folder = $this->app_()->postJson('/api/folders', ['name' => 'Map'])->json('folder.id');
+        $id = $this->upload(['title' => 'Kaal', 'hidden' => '1', 'notes' => 'privé', 'folder_id' => (string) $folder, 'release_date' => '2026-05-01', 'video_type' => 'Official Audio'])->json('release.id');
+        $r = $this->app_()->post("/api/releases/$id", ['style' => 'riddim, 150 bpm', 'lyrics' => "[Chorus]\nLicht"], ['X-HTTP-Method-Override' => 'PUT', 'Accept' => 'application/json'])->assertOk()->json('release');
+        $this->assertSame(['Kaal', 'riddim, 150 bpm', "[Chorus]\nLicht", 150, true, 'privé', $folder, '2026-05-01', 'Official Audio'],
+            [$r['title'], $r['style'], $r['lyrics'], $r['bpm'], $r['hidden'], $r['notes'], $r['folder_id'], $r['release_date'], $r['video_type']]);
+        $this->assertStringContainsString('150 BPM · Riddim', $r['yt_description'], 'the YouTube text follows');
+    }
 }

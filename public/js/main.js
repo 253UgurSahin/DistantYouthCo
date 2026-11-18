@@ -8,6 +8,7 @@ import { editView, youtubeView, accountsView, settingsView, accountView, authVie
 import { loading, errorPage } from './parts.js';
 import { downloadsView } from './views-downloads.js';
 import { bulkView } from './views-bulk.js';
+import { fillView } from './views-fill.js';
 
 const shell = document.getElementById('shell');
 const main = document.getElementById('main');
@@ -24,6 +25,7 @@ const ROUTES = [
   [/^\/release\/(\d+)$/, (m) => releaseView(m[1]), 'releases'],
   [/^\/nieuw$/, () => editView(null), 'releases'],
   [/^\/meerdere$/, () => bulkView(), 'releases'],
+  [/^\/aanvullen$/, (m, q) => fillView(q), 'releases'],
   [/^\/collecties$/, () => collectionsView(), 'collecties'],
   [/^\/collectie\/(\d+)$/, (m) => collectionView(m[1]), 'collecties'],
   [/^\/playlists$/, () => playlistsView(), 'playlists'],

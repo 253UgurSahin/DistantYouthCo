@@ -4,6 +4,7 @@ import { player } from './player.js';
 import { isAdmin } from './session.js';
 import { standPanel } from './dashboard.js';
 import { videoPlayer, hasVideo } from './video.js';
+import { needsWords } from './views-fill.js';
 import { coverEl, sectionHead, emptyState, releaseCard, collectionCard, playlistCard, trackRow, addToPlaylist, namesPanel } from './parts.js';
 
 
@@ -344,9 +345,11 @@ function nextStep(r) {
 
 function todoPanel(releases) {
   const steps = releases.map((r) => ({ r, s: nextStep(r) })).filter((x) => x.s);
+  const bare = releases.filter(needsWords).length;
   const head = el('div', { class: 'section-head' }, el('h2', { id: 'todo-h' }, 'Te doen'),
     el('span', { class: 'small faint' }, steps.length ? `${steps.length} ${steps.length === 1 ? 'release' : 'releases'} onderweg` : 'alles live'),
-    el('span', { class: 'rule' }));
+    el('span', { class: 'rule' }),
+    bare ? el('a', { class: 'small fill-link', href: '#/aanvullen' }, icon('wand-sparkles', 'xs'), `${bare} zonder style of lyrics: aanvullen`) : null);
   if (!steps.length) {
     return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head,
       el('p', { class: 'todo-done' }, icon('circle-check', 'sm'), 'Alles staat op YouTube. Tijd voor de volgende.'));

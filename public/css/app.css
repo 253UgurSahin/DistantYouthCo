@@ -810,3 +810,11 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .toast-action { margin-left: var(--space-2); display: inline-flex; align-items: center; gap: 6px; min-height: var(--size-control-sm); padding: 0 var(--space-3); border-radius: var(--radius-pill); border: var(--size-border) solid currentColor; background: transparent; color: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
 .toast-action:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
 .toast-action:focus-visible { outline: var(--size-ring) solid currentColor; outline-offset: 2px; }
+/* Aanvullen */
+.cover.md { width: 72px; height: 72px; padding: 4px; flex: none; }
+.fill-progress { display: flex; align-items: center; gap: var(--space-3); }
+.fill-progress .progress { flex: 1; }
+.fill-head { gap: var(--space-4); align-items: center; }
+.fill-head .grow { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.fill-title { margin: 0; font-family: var(--font-display); font-size: var(--text-lg); line-height: var(--text-lg--line-height); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.fill-link { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
