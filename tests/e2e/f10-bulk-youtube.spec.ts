@@ -112,6 +112,7 @@ test.describe('as listener', () => {
     await expectAccessible(page);
     const play = page.getByRole('button', { name: `Speelt af via YouTube: ${title}` });
     await expect(play).toBeVisible();
+    await expect(page.getByText('Pas als je op afspelen drukt, ziet YouTube je IP-adres.')).toBeVisible(); // X004
     expect(asked).toEqual([]);
     await play.click();
     const frame = page.locator('iframe.yt-frame');

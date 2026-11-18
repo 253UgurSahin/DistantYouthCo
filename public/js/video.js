@@ -49,7 +49,9 @@ export function youtubeFrame(r, { autoplay = false, start = 0 } = {}) {
     el('span', { class: 'yt-note xs' }, 'Speelt af via YouTube'));
   facade.addEventListener('click', () => box.replaceChildren(frame()));
   box.append(facade);
-  return box;
+  // Said before anyone presses play (X004): YouTube is another party.
+  return el('div', { class: 'stack yt-wrap', style: { gap: '6px' } }, box,
+    el('p', { class: 'xs muted', style: { margin: 0 } }, 'Speelt af via YouTube. Pas als je op afspelen drukt, ziet YouTube je IP-adres.'));
 }
 
 /** A video player in the app's own style: a round play button, a thin position line, sound, full screen. */
