@@ -168,4 +168,16 @@ class ReleaseTest extends TestCase
         $this->get('/downloads/videos.zip?ids=999999')->assertNotFound();
         $this->call('HEAD', '/downloads/videos.zip')->assertOk()->assertHeader('Content-Type', 'application/zip');
     }
+
+    public function test_a_release_knows_the_one_before_and_after_it_and_skips_what_a_listener_may_not_see(): void
+    {
+        $this->actingAs($this->admin());
+        $old = $this->upload(['title' => 'Oud', 'release_date' => '2026-01-01'])->json('release.id');
+        $hidden = $this->upload(['title' => 'Geheim', 'release_date' => '2026-02-01', 'hidden' => '1'])->json('release.id');
+        $new = $this->upload(['title' => 'Nieuw', 'release_date' => '2026-03-01'])->json('release.id');
+        $this->getJson("/api/releases/$hidden")->assertJsonPath('neighbours.previous.id', $new)->assertJsonPath('neighbours.next.id', $old);
+        $this->actingAs($this->listener());
+        $this->getJson("/api/releases/$new")->assertJson(['neighbours' => ['previous' => null, 'next' => ['id' => $old, 'title' => 'Oud']]]);
+        $this->getJson("/api/releases/$old")->assertJsonPath('neighbours.previous.id', $new)->assertJsonPath('neighbours.next', null);
+    }
 }

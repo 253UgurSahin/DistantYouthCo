@@ -115,7 +115,7 @@ export async function homeView(query) {
 // ---------- S02 Release ----------
 
 export async function releaseView(id) {
-  const { release: r } = await api(`/releases/${id}`);
+  const { release: r, neighbours: nb } = await api(`/releases/${id}`);
   const admin = isAdmin();
   const facts = ['Distant Youth Co.', r.release_date ? fmtDate(r.release_date) : null, r.duration ? fmtTime(r.duration) : null, r.bpm ? `${r.bpm} BPM` : null].filter(Boolean);
   const hook = hookLine(r.lyrics);
@@ -169,7 +169,11 @@ export async function releaseView(id) {
   }
 
   const style = r.style ? el('section', { class: 'panel quiet stack', style: { gap: '8px' } }, el('h2', { class: 'label' }, 'Style'), el('p', { class: 'small', style: { margin: 0 } }, r.style)) : null;
-  return el('div', { class: 'wrap page' }, head, el('div', { class: 'cols' }, el('div', { class: 'main-col stack' }, lyrics, style), side));
+  // Paging through the releases, in the order of the list (newest first).
+  const pager = nb && (nb.previous || nb.next) ? el('nav', { class: 'pager', 'aria-label': 'Andere releases' },
+    nb.previous ? el('a', { class: 'pager-link prev', href: `#/release/${nb.previous.id}`, rel: 'prev' }, icon('arrow-left', 'sm'), el('span', {}, el('span', { class: 'label' }, 'Vorige'), el('b', {}, nb.previous.title))) : el('span'),
+    nb.next ? el('a', { class: 'pager-link next', href: `#/release/${nb.next.id}`, rel: 'next' }, el('span', {}, el('span', { class: 'label' }, 'Volgende'), el('b', {}, nb.next.title)), icon('arrow-right', 'sm')) : el('span')) : null;
+  return el('div', { class: 'wrap page' }, head, el('div', { class: 'cols' }, el('div', { class: 'main-col stack' }, lyrics, style), side), pager);
 }
 
 // ---------- S05 Collections and playlists ----------

@@ -39,7 +39,19 @@ class ReleaseController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
-        return response()->json(['release' => new ReleaseResource(self::find($request, $id)), 'limits' => YoutubeKit::LIMITS]);
+        $release = self::find($request, $id);
+
+        return response()->json(['release' => new ReleaseResource($release), 'limits' => YoutubeKit::LIMITS, 'neighbours' => self::neighbours($request, $release)]);
+    }
+
+    /** The release before and after this one in the list as this user sees it (newest first), for paging through. */
+    private static function neighbours(Request $request, Release $release): array
+    {
+        $list = self::visible($request)->setEagerLoads([])->get(['releases.id', 'releases.title'])->values();
+        $i = $list->search(fn ($r) => $r->id === $release->id);
+        $pick = fn ($r) => $r ? ['id' => $r->id, 'title' => $r->title] : null;
+
+        return ['previous' => $pick($i > 0 ? $list[$i - 1] : null), 'next' => $pick($list[$i + 1] ?? null)];
     }
 
     public function store(Request $request): JsonResponse

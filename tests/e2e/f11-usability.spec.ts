@@ -31,3 +31,21 @@ test.describe('as admin', () => {
     await expectAccessible(page);
   });
 });
+
+test.describe('as listener', () => {
+  test.use({ storageState: AUTH.alice });
+
+  test('U004 a release page leads to the release before and after it', async ({ page }) => {
+    const { releases } = await (await apiAs(page, 'GET', '/releases')).json();
+    expect(releases.length).toBeGreaterThan(2);
+    await page.goto(`/#/release/${releases[1].id}`);
+    const pager = page.getByRole('navigation', { name: 'Andere releases' });
+    await expect(pager.getByRole('link', { name: `Vorige ${releases[0].title}` })).toBeVisible();
+    await pager.getByRole('link', { name: `Volgende ${releases[2].title}` }).click();
+    await expect(page.getByRole('heading', { level: 1, name: releases[2].title })).toBeVisible();
+    await page.goto(`/#/release/${releases[0].id}`);
+    await expect(pager.getByRole('link', { name: /^Vorige/ })).toHaveCount(0);
+    await expectAccessible(page);
+  });
+});
+

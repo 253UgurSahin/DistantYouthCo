@@ -798,3 +798,10 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .dup-hint:empty { display: none; }
 .save-state:empty { display: none; }
 .todo-more { align-self: flex-start; }
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); border-top: var(--size-border) solid var(--color-border); padding-top: var(--space-6); }
+.pager-link { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); border: var(--size-border) solid var(--color-border); background: var(--color-surface); color: var(--color-text); text-decoration: none; min-width: 0; }
+.pager-link:hover { border-color: var(--color-text-muted); }
+.pager-link > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pager-link b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pager-link.next { justify-content: flex-end; text-align: right; grid-column: 2; }
+@media (max-width: 640px) { .pager-link .label { display: none; } .pager-link { padding: var(--space-3); } }
