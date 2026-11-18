@@ -5,6 +5,9 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// PHP adds "X-Powered-By: PHP/x.y.z" itself, after the app's headers: take it off here (expose_php is a host setting).
+header_remove('X-Powered-By');
+
 // Where the app lives: one folder up (the project as it is), or "distantyouth" next to public_html
 // (shared hosting, see LEESMIJ.txt), or inside it as a last resort.
 $base = null;
