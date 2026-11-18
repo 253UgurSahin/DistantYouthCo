@@ -49,7 +49,8 @@ function spark(values) {
  * "De stand van de nacht": the numbers of this app at dashboard level 3.
  * onFilter(status) narrows the release grid to the releases behind a number (the drill-down).
  */
-export function standPanel(first, onFilter) {
+/** withMatrix: the table of what each release has (for listeners; the admin has Te doen for that). */
+export function standPanel(first, onFilter, { withMatrix = true } = {}) {
   let data = first;
   let period = first.period;
   let paused = false;
@@ -196,7 +197,7 @@ export function standPanel(first, onFilter) {
     el('div', { class: 'stack', style: { gap: '6px' } }, bars, barLabels,
       el('div', { class: 'row' }, el('span', { class: 'xs faint' }, `Per maand, Nederlandse tijd`), el('span', { class: 'spacer' }), tableBtn)),
     el('div', { class: 'table-wrap' }, chartTable),
-    el('div', { class: 'stack', style: { gap: 'var(--space-3)' } }, el('h3', { class: 'label' }, 'Wat elke release al heeft'), matrix));
+    withMatrix ? el('div', { class: 'stack', style: { gap: 'var(--space-3)' } }, el('h3', { class: 'label' }, 'Wat elke release al heeft'), matrix) : null);
 
   node.setActive = (s) => {
     active = s;

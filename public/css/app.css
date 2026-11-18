@@ -797,3 +797,4 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 .dup-hint { display: flex; align-items: center; gap: 6px; margin-top: calc(var(--space-2) * -1); }
 .dup-hint:empty { display: none; }
 .save-state:empty { display: none; }
+.todo-more { align-self: flex-start; }

@@ -31,6 +31,8 @@ test.describe('as admin', () => {
     await page.goto('/');
     const todo = page.getByRole('region', { name: 'Te doen' });
     await expect(todo).toBeVisible();
+    const all = todo.getByRole('button', { name: /^Toon alle/ });
+    if (await all.count()) await all.click(); // more than five on their way: the rest is one click away
     await expect(todo.getByRole('link', { name: /Lanterns in the Rain.*Op YouTube zetten/ })).toHaveAttribute('href', `#/release/${SEED.lanterns}/youtube`);
   });
 });

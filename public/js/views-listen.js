@@ -104,7 +104,7 @@ export async function homeView(query) {
     filter = f;
     draw();
     grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  }, { withMatrix: !isAdmin() });
   body.append(stand);
 
   draw();
@@ -322,13 +322,22 @@ function todoPanel(releases) {
     return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head,
       el('p', { class: 'todo-done' }, icon('circle-check', 'sm'), 'Alles staat op YouTube. Tijd voor de volgende.'));
   }
+  // Five at first; the rest one click away, in the same list.
   const MAX = 5;
-  const list = el('ul', { class: 'todo-list' }, steps.slice(0, MAX).map(({ r, s }) => el('li', {},
-    el('a', { class: 'todo-row', href: s.href },
-      coverEl(r, 'xs'),
-      el('span', { class: 'todo-text' }, el('b', {}, r.title), el('span', { class: 'xs muted' }, moon(r.status, 'sm'), ` ${STATUS_WORDS[r.status]}${r.hidden ? ' · verborgen' : ''}`)),
-      el('span', { class: 'todo-go' }, icon(s.ic, 'sm'), s.what, icon('chevron-right', 'sm'))))));
-  return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head, list,
-    steps.length > MAX ? el('p', { class: 'small muted', style: { margin: 0 } }, `En nog ${steps.length - MAX}: kies Concept of Klaar voor YouTube hieronder.`) : null);
+  let open = false;
+  const list = el('ul', { class: 'todo-list', id: 'todo-list' });
+  const more = el('button', { type: 'button', class: 'btn ghost sm todo-more', 'aria-controls': 'todo-list', 'aria-expanded': 'false' });
+  const drawList = () => {
+    list.replaceChildren(...(open ? steps : steps.slice(0, MAX)).map(({ r, s }) => el('li', {},
+      el('a', { class: 'todo-row', href: s.href },
+        coverEl(r, 'xs'),
+        el('span', { class: 'todo-text' }, el('b', {}, r.title), el('span', { class: 'xs muted' }, moon(r.status, 'sm'), ` ${STATUS_WORDS[r.status]}${r.hidden ? ' · verborgen' : ''}`)),
+        el('span', { class: 'todo-go' }, icon(s.ic, 'sm'), s.what, icon('chevron-right', 'sm'))))));
+    more.replaceChildren(icon(open ? 'chevron-up' : 'chevron-down', 'sm'), open ? 'Toon minder' : `Toon alle ${steps.length}`);
+    more.setAttribute('aria-expanded', String(open));
+  };
+  more.addEventListener('click', () => { open = !open; drawList(); more.focus(); });
+  drawList();
+  return el('section', { class: 'stack todo', 'aria-labelledby': 'todo-h' }, head, list, steps.length > MAX ? more : null);
 }
 

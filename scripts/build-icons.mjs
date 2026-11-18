@@ -8,7 +8,7 @@ const NAMES = ['play', 'pause', 'skip-back', 'skip-forward', 'shuffle', 'repeat'
   'message-square-text', 'video', 'volume-2', 'volume-x', 'moon', 'sun', 'monitor', 'log-out', 'settings',
   'users', 'trash-2', 'pencil', 'folder', 'list', 'external-link', 'arrow-up', 'arrow-down', 'image',
   'file-audio', 'refresh-cw', 'loader-circle', 'music', 'ellipsis', 'eye-off', 'key-round', 'circle-alert',
-  'eye', 'archive', 'clapperboard', 'circle-check', 'list-todo', 'files', 'circle-x'];
+  'eye', 'archive', 'clapperboard', 'circle-check', 'list-todo', 'files', 'circle-x', 'chevron-up', 'undo-2', 'arrow-right', 'arrow-left', 'layout-grid', 'rows-3', 'wand-sparkles'];
 const dir = path.resolve('node_modules/lucide-static/icons');
 const out = {};
 for (const n of NAMES) {
