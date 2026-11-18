@@ -53,7 +53,7 @@ export async function downloadsView() {
 
   const row = (v) => {
     const box = el('input', { type: 'checkbox', id: `dl-${v.id}`, checked: chosen.has(v.id), onchange: () => { if (box.checked) chosen.add(v.id); else chosen.delete(v.id); sync(); } });
-    const meta = [v.video_type, v.folder_name, v.release_date ? new Date(v.release_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : null].filter(Boolean).join(' · ');
+    const meta = [v.video_type, v.folder_name, v.release_date ? new Date(`${v.release_date}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : null].filter(Boolean).join(' · ');
     return el('li', { class: 'dl-row' },
       el('label', { class: 'dl-pick check', for: `dl-${v.id}` }, box,
         coverEl(v, 'xs'),

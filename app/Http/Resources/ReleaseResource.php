@@ -43,6 +43,7 @@ class ReleaseResource extends JsonResource
             'cover_url' => $this->cover_file ? "/media/{$this->id}/cover?v=$v" : null,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
+            'version' => (int) $this->version,
         ];
         if ($request->user()?->isAdmin()) {
             $out += [

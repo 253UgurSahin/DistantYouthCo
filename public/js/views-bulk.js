@@ -65,7 +65,7 @@ export async function bulkView() {
   };
 
   // ---------- the drop zone ----------
-  const picker = el('input', { type: 'file', multiple: true, class: 'sr-only', id: 'bulk-files', accept: '.wav,.mp3,.mp4,.m4v,.mov,.jpg,.jpeg,.png,.webp,audio/wav,audio/mpeg,video/mp4,image/*' });
+  const picker = el('input', { type: 'file', multiple: true, class: 'sr-only', tabindex: '-1', id: 'bulk-files', accept: '.wav,.mp3,.mp4,.m4v,.mov,.jpg,.jpeg,.png,.webp,audio/wav,audio/mpeg,video/mp4,image/*' });
   picker.addEventListener('change', () => { addFiles(picker.files); picker.value = ''; });
   const drop = el('div', { class: 'bulk-drop slot lead' },
     el('span', { class: 'slot-kind', 'aria-hidden': 'true' }, icon('files')),

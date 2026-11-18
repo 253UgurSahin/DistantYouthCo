@@ -56,7 +56,7 @@ export async function editView(id) {
     }
   };
   const slot = (s) => {
-    const input = el('input', { type: 'file', accept: s.accept, multiple: !id, class: 'sr-only', id: `file-${s.kind}`, 'aria-describedby': `file-${s.kind}-text` });
+    const input = el('input', { type: 'file', accept: s.accept, multiple: !id, class: 'sr-only', tabindex: '-1', id: `file-${s.kind}`, 'aria-describedby': `file-${s.kind}-text` });
     const text = el('div', { class: 'xs muted', id: `file-${s.kind}-text` });
     const bar = el('div', { class: 'progress', hidden: true }, el('i'));
     bars.push(bar);
@@ -164,6 +164,7 @@ export async function editView(id) {
     fd.append('video_type', vtype.value);
     fd.append('hidden', hidden.checked ? '1' : '0');
     fd.append('notes', notes.value);
+    if (id) fd.append('version', String(r.version ?? ''));
     fd.append('youtube_url', ytLink.value.trim());
     for (const k of Object.keys(removed)) fd.append(`remove_${k}`, '1');
     for (const b of buttons.querySelectorAll('button')) b.disabled = true;
@@ -197,14 +198,15 @@ export async function editView(id) {
   const buttons = el('div', { class: 'form-actions' },
     id ? el('button', { type: 'button', class: 'btn danger', onclick: () => remove().catch(fail) }, icon('trash-2', 'sm'), 'Verwijderen') : null,
     el('span', { class: 'spacer' }),
-    el('button', { type: 'button', class: 'btn primary lg', onclick: () => save() }, 'Opslaan'));
+    // A submit button: Enter in a field saves too.
+    el('button', { type: 'submit', class: 'btn primary lg' }, 'Opslaan'));
 
   return el('div', { class: 'wrap page' },
     el('div', {},
       el('a', { href: id ? `#/release/${id}` : '#/', class: 'btn ghost sm', style: { paddingLeft: 0 } }, icon('chevron-left', 'sm'), id ? r.title : 'Releases'),
       el('h1', { class: 'h-xl moon-title', style: { marginTop: '12px' } }, titleMoon, id ? 'Release bewerken' : 'Nieuwe release'),
       el('p', { class: 'muted', style: { margin: '6px 0 0' } }, id ? 'Alleen de WAV en een titel zijn verplicht.' : 'Sleep je WAV (en eventueel MP4 en cover) erin: de titel komt uit de bestandsnaam en de YouTube-tekst maakt de app zelf.')),
-    el('form', { class: 'cols', onsubmit: (e) => { e.preventDefault(); save(); },
+    el('form', { class: 'cols', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(); },
       // Files dropped anywhere on the form (not on a slot) go to their own slots too.
       ondragover: (e) => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); },
       ondrop: (e) => { if (e.defaultPrevented || !e.dataTransfer?.files.length) return; e.preventDefault(); takeFiles([...e.dataTransfer.files], null); } },
@@ -284,12 +286,13 @@ export async function youtubeView(id, query) {
     clearTimeout(saveTimer);
     saved.textContent = 'Opslaan…';
     try {
-      await api(`/releases/${id}/youtube`, { method: 'PUT', body: { yt_title: titleIn.value, yt_description: descIn.value, yt_tags: tagsIn.value } });
+      const res = await api(`/releases/${id}/youtube`, { method: 'PUT', body: { yt_title: titleIn.value, yt_description: descIn.value, yt_tags: tagsIn.value, version: r.version } });
+      r.version = res.release.version;
       dirty = false;
       r.yt_generated_with = 'edited';
       saved.textContent = 'Opgeslagen';
     } catch (e) {
-      saved.textContent = '';
+      saved.textContent = 'Niet bewaard';
       fail(e);
     }
   };
@@ -320,7 +323,8 @@ export async function youtubeView(id, query) {
     genBtn.setAttribute('aria-busy', 'true');
     genNote.textContent = mode === 'claude' ? 'Claude schrijft je beschrijving… (meestal 10 tot 30 seconden)' : 'Template wordt ingevuld…';
     try {
-      const res = await api(`/releases/${id}/youtube`, { method: 'POST', body: { mode, extra: extra.value } });
+      const res = await api(`/releases/${id}/youtube`, { method: 'POST', body: { mode, extra: extra.value, version: r.version } });
+      r.version = res.release.version;
       titleIn.value = res.release.yt_title;
       descIn.value = res.release.yt_description;
       tagsIn.value = res.release.yt_tags;
@@ -361,7 +365,8 @@ export async function youtubeView(id, query) {
   };
   drawSteps();
   const markLive = async () => {
-    const res = await api(`/releases/${id}/status`, { method: 'POST', body: { youtube_url: ytUrl.value, on_youtube: true } });
+    const res = await api(`/releases/${id}/status`, { method: 'POST', body: { youtube_url: ytUrl.value, on_youtube: true, version: r.version } });
+    r.version = res.release.version;
     r.on_youtube = 1;
     r.youtube_url = ytUrl.value;
     drawSteps();

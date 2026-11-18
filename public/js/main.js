@@ -120,8 +120,13 @@ async function route() {
   }
   if (id !== renderId) return;
   // A short cross-fade between screens; the header and the player stay where they are.
-  if (document.startViewTransition && !reducedMotion.matches) await document.startViewTransition(() => main.replaceChildren(view)).updateCallbackDone;
-  else main.replaceChildren(view);
+  if (document.startViewTransition && !reducedMotion.matches) {
+    const vt = document.startViewTransition(() => main.replaceChildren(view));
+    // A transition that the next screen cuts short is skipped: expected, not an error.
+    vt.ready.catch(() => {});
+    vt.finished.catch(() => {});
+    await vt.updateCallbackDone.catch(() => {});
+  } else main.replaceChildren(view);
   document.title = `${main.querySelector('h1')?.textContent || 'Releases'} — Distant Youth Studio`;
   window.scrollTo(0, 0);
   remountDepth();

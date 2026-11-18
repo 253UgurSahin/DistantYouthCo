@@ -143,6 +143,7 @@ export function toast(message, kind = 'ok', { action } = {}) {
 export function dialog(build, cls = '') {
   return new Promise((resolve) => {
     const dlg = el('dialog', { class: `dlg ${cls}`.trim() });
+    const opener = document.activeElement;
     let result;
     const close = (value) => {
       result = value;
@@ -150,7 +151,20 @@ export function dialog(build, cls = '') {
     };
     dlg.addEventListener('close', () => {
       dlg.remove();
+      // Back where you were, for the keyboard.
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
       resolve(result);
+    });
+    // Tab and Shift+Tab go round inside the dialog, never out of it behind its backdrop.
+    dlg.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const stops = [...dlg.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select, textarea, iframe, [tabindex]:not([tabindex="-1"])')]
+        .filter((n) => n.offsetParent !== null || n === document.activeElement);
+      if (!stops.length) return;
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
     dlg.addEventListener('click', (e) => {
       if (e.target === dlg) close();

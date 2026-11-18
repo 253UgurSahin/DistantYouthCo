@@ -23,14 +23,22 @@ async function parse(res) {
 // both servers (Node and PHP) read X-HTTP-Method-Override.
 const wire = (method) => (method === 'GET' || method === 'POST' ? { method, extra: {} } : { method: 'POST', extra: { 'X-HTTP-Method-Override': method } });
 
+export const OFFLINE = 'Geen verbinding met de server. Controleer je internet en probeer het opnieuw.';
+
 export async function api(path, { method = 'GET', body } = {}) {
   const w = wire(method);
-  const res = await fetch(`/api${path}`, {
-    method: w.method,
-    credentials: 'same-origin',
-    headers: { 'X-Requested-With': 'dyc', ...w.extra, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      method: w.method,
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'dyc', ...w.extra, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // The browser could not reach the server at all: its own text ("Failed to fetch") means nothing to a person.
+    throw new ApiError(0, OFFLINE);
+  }
   return parse(res);
 }
 
@@ -50,7 +58,7 @@ export function upload(path, method, formData, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
       else reject(new ApiError(xhr.status, xhr.response?.error || `Upload mislukt (${xhr.status}).`));
     };
-    xhr.onerror = () => reject(new ApiError(0, 'Geen verbinding met de server.'));
+    xhr.onerror = () => reject(new ApiError(0, OFFLINE));
     xhr.send(formData);
   });
 }
@@ -65,7 +73,7 @@ function sendChunk(url, blob, onProgress) {
     xhr.responseType = 'json';
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.response) : reject(new ApiError(xhr.status, xhr.response?.error || `Upload mislukt (${xhr.status}).`)));
-    xhr.onerror = () => reject(new ApiError(0, 'Geen verbinding met de server.'));
+    xhr.onerror = () => reject(new ApiError(0, OFFLINE));
     xhr.send(blob);
   });
 }

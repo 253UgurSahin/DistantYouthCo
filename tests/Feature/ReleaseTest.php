@@ -223,4 +223,22 @@ class ReleaseTest extends TestCase
             [$r['title'], $r['style'], $r['lyrics'], $r['bpm'], $r['hidden'], $r['notes'], $r['folder_id'], $r['release_date'], $r['video_type']]);
         $this->assertStringContainsString('150 BPM · Riddim', $r['yt_description'], 'the YouTube text follows');
     }
+
+    public function test_an_older_copy_cannot_overwrite_a_newer_one(): void
+    {
+        $this->actingAs($this->admin());
+        $r = $this->upload(['title' => 'Versie'])->json('release');
+        $this->assertSame(0, $r['version']);
+        $put = fn (array $f) => $this->app_()->post("/api/releases/{$r['id']}", $f, ['X-HTTP-Method-Override' => 'PUT', 'Accept' => 'application/json']);
+        $put(['title' => 'Tab 1', 'version' => '0'])->assertOk()->assertJsonPath('release.version', 1);
+        $put(['notes' => 'tab 2', 'version' => '0'])->assertStatus(409)->assertJsonPath('error', fn ($e) => str_contains($e, 'intussen gewijzigd'));
+        $this->assertSame('Tab 1', $this->getJson("/api/releases/{$r['id']}")->json('release.title'));
+        // The YouTube-kit and the status count too, and say the same.
+        $this->app_()->putJson("/api/releases/{$r['id']}/youtube", ['yt_title' => 'a', 'yt_description' => 'b', 'yt_tags' => 'c', 'version' => 1])->assertOk()->assertJsonPath('release.version', 2);
+        $this->app_()->putJson("/api/releases/{$r['id']}/youtube", ['yt_title' => 'x', 'yt_description' => 'y', 'yt_tags' => 'z', 'version' => 1])->assertStatus(409);
+        $this->app_()->postJson("/api/releases/{$r['id']}/status", ['on_spotify' => true, 'version' => 1])->assertStatus(409);
+        $this->app_()->postJson("/api/releases/{$r['id']}/status", ['on_spotify' => true, 'version' => 2])->assertOk()->assertJsonPath('release.version', 3);
+        // Without a version (an older screen still open after an update): as before.
+        $put(['notes' => 'zonder'])->assertOk();
+    }
 }

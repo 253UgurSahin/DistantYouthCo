@@ -18,6 +18,7 @@ class YoutubeController extends Controller
     public function generate(Request $request, string $id, YoutubeKit $kit): JsonResponse
     {
         $release = Release::find(Input::id($id)) ?? throw ApiError::notFound('Release niet gevonden.');
+        $release->assertVersion($request->input('version'));
         $out = $kit->generate($release, Setting::current(), $request->input('mode') !== 'template', Input::text($request->input('extra'), 1000, 'Extra wensen'));
         $release->forceFill([
             'yt_title' => $out['title'],
@@ -25,6 +26,7 @@ class YoutubeController extends Controller
             'yt_tags' => $out['tags'],
             'yt_generated_with' => $out['generated_with'],
             'bpm' => $release->bpm ?? $out['bpm'],
+            'version' => (int) $release->version + 1,
         ])->save();
 
         return response()->json(['release' => new ReleaseResource($release->fresh('folder')), 'generated_with' => $out['generated_with']]);
@@ -33,7 +35,9 @@ class YoutubeController extends Controller
     public function save(Request $request, string $id): JsonResponse
     {
         $release = Release::find(Input::id($id)) ?? throw ApiError::notFound('Release niet gevonden.');
+        $release->assertVersion($request->input('version'));
         $release->forceFill([
+            'version' => (int) $release->version + 1,
             'yt_title' => Input::text($request->input('yt_title'), 300, 'Titel'),
             'yt_description' => Input::text($request->input('yt_description'), 10000, 'Beschrijving'),
             'yt_tags' => Input::text($request->input('yt_tags'), 2000, 'Tags'),

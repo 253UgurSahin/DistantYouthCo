@@ -102,6 +102,23 @@ class Release extends Model
         Storage::disk('local')->deleteDirectory($this->directory());
     }
 
+    /**
+     * A change from a copy that is older than this release (another tab saved in between) is refused,
+     * so it never wipes out the newer one without a word. A request without a version is not checked.
+     */
+    public function assertVersion(mixed $sent): void
+    {
+        if ($sent !== null && $sent !== '' && (int) $sent !== (int) $this->version) {
+            throw new \App\Exceptions\ApiError(409, 'Deze release is intussen gewijzigd, in een ander tabblad of door iemand anders. Laad de pagina opnieuw; wat je hier typte staat er nog, kopieer het eerst als je het wilt houden.');
+        }
+    }
+
+    /** One step up, for every change someone makes. */
+    public function bumpVersion(): void
+    {
+        $this->version = (int) $this->version + 1;
+    }
+
     /** Releases deleted longer ago than the undo time: gone for good, with their files. */
     public static function purgeDeleted(): void
     {

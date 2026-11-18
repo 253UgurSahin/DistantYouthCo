@@ -80,6 +80,7 @@ class ReleaseController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $release = Release::find(Input::id($id)) ?? throw ApiError::notFound('Release niet gevonden.');
+        $release->assertVersion($request->input('version'));
         $fields = $this->fields($request, $release);
         $files = $this->files->fromRequest($request);
         DB::transaction(function () use ($request, $release, $fields, $files) {
@@ -111,6 +112,7 @@ class ReleaseController extends Controller
                     [$release->cover_file, $release->cover_generated] = [null, false];
                 }
             }
+            $release->bumpVersion();
             $release->touch();
             $release->save();
         });
@@ -143,6 +145,7 @@ class ReleaseController extends Controller
     public function status(Request $request, string $id): JsonResponse
     {
         $release = Release::find(Input::id($id)) ?? throw ApiError::notFound('Release niet gevonden.');
+        $release->assertVersion($request->input('version'));
         foreach (['youtube_url' => 'YouTube-link', 'spotify_url' => 'Spotify-link'] as $key => $name) {
             if ($request->exists($key)) {
                 $release->$key = Input::urlOrEmpty($request->input($key), $name);
@@ -153,6 +156,7 @@ class ReleaseController extends Controller
                 $release->$key = Input::bool($request->input($key));
             }
         }
+        $release->bumpVersion();
         $release->touch();
 
         return response()->json(['release' => new ReleaseResource($release->fresh('folder'))]);

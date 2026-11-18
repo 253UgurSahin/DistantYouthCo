@@ -48,8 +48,9 @@ test('F02-E1 accents, emoji and HTML in a title come back as plain text', async 
 });
 
 test('F02-E2 a title over 200 characters is refused', async ({ page }) => {
-  const r = await apiAs(page, 'PUT', `/releases/${SEED.lanterns}`, undefined);
-  expect(r.status()).toBe(400); // no title at all
+  // Since 2.3 a change keeps what it does not send, so the title must be sent to be refused.
+  expect((await apiAs(page, 'PUT', `/releases/${SEED.lanterns}`, { title: 'x'.repeat(201) })).status()).toBe(400);
+  expect((await apiAs(page, 'PUT', `/releases/${SEED.lanterns}`, { title: '' })).status()).toBe(400); // an empty title
   await page.goto(`/#/release/${SEED.lanterns}/bewerken`);
   await expect(page.getByLabel('Titel', { exact: true })).toHaveAttribute('maxlength', '200');
 });
