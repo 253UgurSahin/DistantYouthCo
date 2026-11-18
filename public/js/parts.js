@@ -26,7 +26,8 @@ export function releaseCard(r, list, i) {
       r.audio_url
         ? el('button', { class: 'icon-btn solid play-on-cover', type: 'button', 'aria-label': `Speel ${r.title}`, onclick: () => player.playList(list, i) }, icon('play', 'sm'))
         : null),
-    el('a', { href: `#/release/${r.id}`, class: 'title', style: { textDecoration: 'none' } }, r.title),
+    // Two lines at most; the whole title on hover and on its page.
+    el('a', { href: `#/release/${r.id}`, class: 'title', title: r.title, style: { textDecoration: 'none' } }, r.title),
     el('span', { class: 'status' }, moon(r.status, 'sm'), STATUS_WORDS[r.status]));
 }
 

@@ -238,6 +238,18 @@ test.describe('as admin', () => {
     expect(r.yt_tags).toBe('uit tab 1');
   });
 
+  test('F12-L1 a long word in a name never makes a phone screen scroll sideways', async ({ page }) => {
+    await page.request.post('/api/folders', { headers: H, data: { name: `Https://distantyouth.example/${'x'.repeat(60)}/${Date.now()}` } });
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const where of ['/#/collecties', '/']) {
+        await page.goto(where);
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${where} at ${width}`).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
   // ---- the keyboard alone (level 4) ----
 
   test('F12-K1 a new release with the keyboard alone, and a dialog that keeps and returns the focus', async ({ page }) => {
