@@ -8,6 +8,30 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in het bestand `VERSION`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 2.3.0 (2026-11-18)
+Nieuw
+- Aanvullen: na het uploaden van meerdere releases loop je ze één voor één langs om style en lyrics te plakken, met een knop om te luisteren. De BPM en de YouTube-tekst gaan vanzelf mee. Je vindt het bij Te doen op de startpagina en na "Meerdere releases".
+- Ongedaan maken: na het verwijderen van een release staat er even "Ongedaan maken" in de melding. Een uur lang kan hij terug, met bestanden en plekken in playlists; daarna is hij echt weg.
+- Vorige en volgende release onderaan elke release-pagina.
+- De releases op de startpagina ook als compacte lijst, met een volgorde naar keuze (nieuwste, oudste, titel, langste). Je keuze wordt onthouden.
+- Te doen toont nu alles: de eerste vijf, de rest met "Toon alle".
+
+Beter
+- De startpagina toont de voortgang één keer: Te doen voor de admin, de tabel "Wat elke release al heeft" alleen nog voor luisteraars.
+- Enter in een veld slaat het releaseformulier op; met alleen het toetsenbord is er geen onzichtbare tussenstop meer, en de focus blijft in een venster en komt daarna terug.
+- Zonder internet zegt de app dat in het Nederlands, in plaats van "Failed to fetch".
+- Een lange naam zonder spaties (zoals een link) maakt een scherm op de telefoon niet meer breder dan het beeld.
+- "Spotify nog niet" overal, in plaats van soms "niet uit".
+
+Reparaties
+- Twee tabbladen tegelijk: een ouder tabblad overschreef zonder waarschuwing wat je in het andere had opgeslagen. Nu zegt de app "Deze release is intussen gewijzigd" en blijft het nieuwste staan. Dat geldt ook voor de YouTube-kit.
+- Downloads toonde een releasedatum een dag te vroeg op computers ten westen van Nederland (zoals New York).
+- Snel van scherm wisselen gaf soms een scriptfout.
+
+Beveiliging
+- Onder een YouTube-video staat nu dat YouTube je IP-adres ziet zodra je op afspelen drukt.
+- De PHP-versie van de server staat niet meer in elk antwoord; een ongebruikt ontwikkelpakket is weg.
+
 ## 2.2.0 (2026-11-17)
 Nieuw
 - De YouTube-titel, -beschrijving en -tags staan meteen klaar als je een release opslaat (met het template). Pas je daarna titel, style of lyrics aan, dan gaat de tekst vanzelf mee, tot je hem zelf wijzigt. Releases van vóór deze versie krijgen hun tekst bij de update. Claude kan de tekst in de YouTube-kit nog altijd herschrijven.
