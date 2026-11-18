@@ -183,9 +183,15 @@ export async function editView(id) {
     }
   };
   const remove = async () => {
-    if (!(await confirmDialog('Release verwijderen?', `"${r.title}" en al zijn bestanden verdwijnen definitief.`))) return;
+    if (!(await confirmDialog('Release verwijderen?', `"${r.title}" en al zijn bestanden verdwijnen. Direct daarna kun je het nog ongedaan maken.`))) return;
     await api(`/releases/${id}`, { method: 'DELETE' });
-    toast('Verwijderd');
+    toast(`"${r.title}" verwijderd`, 'ok', { action: { label: 'Ongedaan maken', run: async () => {
+      try {
+        await api(`/releases/${id}/restore`, { method: 'POST' });
+        toast(`"${r.title}" is terug`);
+        location.hash = `#/release/${id}`;
+      } catch (e) { fail(e); }
+    } } });
     location.hash = '#/';
   };
   const buttons = el('div', { class: 'form-actions' },

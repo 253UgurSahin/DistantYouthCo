@@ -12,7 +12,8 @@ return new class extends Migration
     {
         $kit = app(YoutubeKit::class);
         $settings = Setting::current();
-        Release::query()->where(fn ($q) => $q->whereNull('yt_description')->orWhere('yt_description', ''))->each(function (Release $r) use ($kit, $settings) {
+        // Without the deleted filter: that column comes in a later migration.
+        Release::withoutGlobalScopes()->where(fn ($q) => $q->whereNull('yt_description')->orWhere('yt_description', ''))->each(function (Release $r) use ($kit, $settings) {
             $out = $kit->generate($r, $settings, false, '');
             $r->forceFill(['yt_title' => $out['title'], 'yt_description' => $out['description'], 'yt_tags' => $out['tags'], 'yt_generated_with' => 'template'])->saveQuietly();
         });

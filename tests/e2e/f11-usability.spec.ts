@@ -1,9 +1,18 @@
 import { test, expect } from '@playwright/test';
-import fs from 'node:fs';
-import { AUTH, HAS_PASSWORDS, ASSETS, SEED, guard, expectAccessible, apiAs } from './helpers';
+import { AUTH, HAS_PASSWORDS, guard, expectAccessible, apiAs } from './helpers';
 
 guard();
 test.skip(!HAS_PASSWORDS, 'no test passwords');
+
+/** A one-second silent WAV, small enough for any host's upload limit (the app's own form sends big files in pieces). */
+function smallWav(): Buffer {
+  const rate = 8000, data = Buffer.alloc(rate * 2);
+  const h = Buffer.alloc(44);
+  h.write('RIFF', 0); h.writeUInt32LE(36 + data.length, 4); h.write('WAVE', 8); h.write('fmt ', 12);
+  h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 2, 28);
+  h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(data.length, 40);
+  return Buffer.concat([h, data]);
+}
 
 test.describe('as admin', () => {
   test.use({ storageState: AUTH.admin });
@@ -18,7 +27,7 @@ test.describe('as admin', () => {
   test('U002 Te doen shows every release on its way, the rest behind one button', async ({ page }) => {
     // Enough releases on their way for more than five.
     for (let i = 0; i < 6; i++) {
-      await page.request.post('/api/releases', { headers: { 'X-Requested-With': 'dyc' }, multipart: { title: `Onderweg ${Date.now()}-${i}`, wav: { name: 'a.wav', mimeType: 'audio/wav', buffer: fs.readFileSync(`${ASSETS}/demo.wav`) } } });
+      await page.request.post('/api/releases', { headers: { 'X-Requested-With': 'dyc' }, multipart: { title: `Onderweg ${Date.now()}-${i}`, wav: { name: 'a.wav', mimeType: 'audio/wav', buffer: smallWav() } } });
     }
     await page.goto('/');
     const todo = page.getByRole('region', { name: 'Te doen' });
@@ -28,6 +37,29 @@ test.describe('as admin', () => {
     await todo.getByRole('button', { name: `Toon alle ${total}` }).click();
     await expect(todo.getByRole('listitem')).toHaveCount(total);
     await expect(todo.getByRole('button', { name: /Toon minder/ })).toBeFocused();
+    await expectAccessible(page);
+  });
+});
+
+test.describe('as admin, deleting', () => {
+  test.use({ storageState: AUTH.admin });
+
+  test('U006 a deleted release comes back with "Ongedaan maken"', async ({ page }) => {
+    const title = `Per ongeluk ${Date.now()}`;
+    const res = await page.request.post('/api/releases', { headers: { 'X-Requested-With': 'dyc' }, multipart: { title, wav: { name: 'a.wav', mimeType: 'audio/wav', buffer: smallWav() } } });
+    const id = (await res.json()).release.id;
+    await page.goto(`/#/release/${id}/bewerken`);
+    await page.getByRole('button', { name: 'Verwijderen' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Verwijderen/ }).click();
+    const status = page.getByRole('status');
+    await expect(status).toContainText(`"${title}" verwijderd`);
+    expect((await apiAs(page, 'GET', `/releases/${id}`)).status()).toBe(404);
+    // It waits while you read it: hover keeps it.
+    await status.getByRole('button', { name: 'Ongedaan maken' }).hover();
+    await page.waitForTimeout(11000);
+    await status.getByRole('button', { name: 'Ongedaan maken' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(status).toContainText(`"${title}" is terug`);
     await expectAccessible(page);
   });
 });

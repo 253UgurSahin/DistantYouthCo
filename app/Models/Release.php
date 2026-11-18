@@ -6,11 +6,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 /** One release: its files, its texts and where it is live. */
 class Release extends Model
 {
+    use SoftDeletes;
+
+    /** How long a deleted release can be put back. */
+    public const UNDO_MINUTES = 60;
+
     public const FILE_COLUMNS = ['wav' => 'wav_file', 'mp3' => 'mp3_file', 'video' => 'video_file', 'cover' => 'cover_file'];
 
     protected $guarded = ['id'];
@@ -94,5 +100,14 @@ class Release extends Model
     public function deleteFiles(): void
     {
         Storage::disk('local')->deleteDirectory($this->directory());
+    }
+
+    /** Releases deleted longer ago than the undo time: gone for good, with their files. */
+    public static function purgeDeleted(): void
+    {
+        self::onlyTrashed()->where('deleted_at', '<', now()->subMinutes(self::UNDO_MINUTES))->get()->each(function (self $r) {
+            $r->forceDelete();
+            $r->deleteFiles();
+        });
     }
 }

@@ -56,6 +56,7 @@ class ReleaseController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        Release::purgeDeleted();
         $fields = $this->fields($request, null);
         $files = $this->files->fromRequest($request);
         if (empty($files['wav'])) {
@@ -122,10 +123,20 @@ class ReleaseController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $release = Release::find(Input::id($id)) ?? throw ApiError::notFound('Release niet gevonden.');
-        $release->delete();
-        $release->deleteFiles();
+        Release::purgeDeleted();
+        $release->delete(); // its files wait, so "Ongedaan maken" can put it back
 
-        return response()->json(['ok' => true]);
+        return response()->json(['ok' => true, 'undo_until' => $release->deleted_at->copy()->addMinutes(Release::UNDO_MINUTES)->format('Y-m-d H:i:s')]);
+    }
+
+    /** "Ongedaan maken": a release deleted within the undo time comes back, with its files and playlists. */
+    public function restore(string $id): JsonResponse
+    {
+        $release = Release::onlyTrashed()->where('deleted_at', '>=', now()->subMinutes(Release::UNDO_MINUTES))->find(Input::id($id))
+            ?? throw ApiError::notFound('Deze release is niet meer terug te zetten.');
+        $release->restore();
+
+        return response()->json(['release' => new ReleaseResource($release->fresh('folder'))]);
     }
 
     /** Live on YouTube or Spotify, with the links. */

@@ -807,3 +807,6 @@ dialog.dlg form { display: flex; flex-direction: column; gap: var(--space-4); }
 @media (max-width: 640px) { .pager-link .label { display: none; } .pager-link { padding: var(--space-3); } }
 .sort-select { width: auto; min-height: var(--size-control-sm); }
 .toolbar .seg button { min-width: var(--size-control-sm); display: inline-flex; align-items: center; justify-content: center; padding: 0 var(--space-3); }
+.toast-action { margin-left: var(--space-2); display: inline-flex; align-items: center; gap: 6px; min-height: var(--size-control-sm); padding: 0 var(--space-3); border-radius: var(--radius-pill); border: var(--size-border) solid currentColor; background: transparent; color: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+.toast-action:hover { background: color-mix(in srgb, currentColor 15%, transparent); }
+.toast-action:focus-visible { outline: var(--size-ring) solid currentColor; outline-offset: 2px; }

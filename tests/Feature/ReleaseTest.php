@@ -109,7 +109,39 @@ class ReleaseTest extends TestCase
         $this->app_()->postJson("/api/releases/$id/status", ['on_spotify' => true, 'spotify_url' => 'javascript:alert(1)'])->assertStatus(400);
         $this->app_()->postJson("/api/releases/$id/status", ['on_spotify' => true])->assertOk()->assertJsonPath('release.status', 'live');
         $this->app_()->deleteJson("/api/releases/$id")->assertOk();
+        $this->getJson("/api/releases/$id")->assertNotFound();
+    }
+
+    public function test_a_deleted_release_can_be_put_back_for_an_hour_then_its_files_go(): void
+    {
+        $this->actingAs($admin = $this->admin());
+        $id = $this->upload(['title' => 'Per ongeluk'], ['wav' => self::wav(), 'video' => self::mp4()])->json('release.id');
+        $pl = $this->app_()->postJson('/api/playlists', ['name' => 'Lijst'])->json('playlist.id');
+        $this->app_()->postJson("/api/playlists/$pl/items", ['release_id' => $id])->assertCreated();
+
+        $this->app_()->deleteJson("/api/releases/$id")->assertOk()->assertJson(['ok' => true, 'undo_until' => now()->addHour()->format('Y-m-d H:i:s')]);
+        $this->getJson("/api/releases/$id")->assertNotFound();
+        $this->assertNotContains($id, collect($this->getJson('/api/releases')->json('releases'))->pluck('id'));
+        $this->assertSame(0, $this->getJson("/api/playlists/$pl")->json('playlist.count'));
+        $this->get("/media/$id/audio")->assertNotFound();
+        $this->actingAs($this->listener());
+        $this->app_()->postJson("/api/releases/$id/restore")->assertForbidden();
+
+        $this->actingAs($admin);
+        $this->app_()->postJson("/api/releases/$id/restore")->assertOk()->assertJsonPath('release.title', 'Per ongeluk');
+        $this->get("/media/$id/audio")->assertOk();
+        $this->assertSame(1, $this->getJson("/api/playlists/$pl")->json('playlist.count'), 'back in its playlist too');
+        $this->app_()->postJson("/api/releases/$id/restore")->assertNotFound(); // not deleted (any more)
+
+        // Deleted again, and more than an hour later: gone with its files, no way back.
+        $this->app_()->deleteJson("/api/releases/$id")->assertOk();
+        $this->travel(61)->minutes();
+        $other = $this->upload(['title' => 'Nieuw'])->json('release.id');
+        $this->app_()->deleteJson("/api/releases/$other")->assertOk();
         $this->assertFalse(Storage::disk('local')->exists("releases/$id"));
+        $this->assertTrue(Storage::disk('local')->exists("releases/$other"), 'the one just deleted still waits');
+        $this->app_()->postJson("/api/releases/$id/restore")->assertNotFound();
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('playlist_release')->where('release_id', $id)->count());
     }
 
     public function test_media_ranges_for_seeking_a_download_name_and_a_session_needed(): void

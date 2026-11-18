@@ -113,14 +113,30 @@ export function hookLine(lyrics) {
 
 // ---------- toasts and dialogs ----------
 
-export function toast(message, kind = 'ok') {
+/**
+ * A short message. With an action ({ label, run }) it gets a button and stays longer (10 s); it never
+ * goes while the pointer or the keyboard is on it, so there is time to read and press.
+ */
+export function toast(message, kind = 'ok', { action } = {}) {
   const root = document.getElementById('toasts');
-  const t = el('div', { class: `toast ${kind === 'error' ? 'error' : ''}` }, kind === 'error' ? icon('circle-alert', 'sm') : icon('check', 'sm'), message);
-  root.append(t);
-  setTimeout(() => {
+  const t = el('div', { class: `toast ${kind === 'error' ? 'error' : ''}` }, kind === 'error' ? icon('circle-alert', 'sm') : icon('check', 'sm'), el('span', {}, message));
+  const close = () => {
     t.classList.add('out');
     setTimeout(() => t.remove(), 300);
-  }, kind === 'error' ? 6000 : 3000);
+  };
+  if (action) {
+    t.append(el('button', { type: 'button', class: 'toast-action', onclick: () => { close(); action.run(); } }, icon('undo-2', 'sm'), action.label));
+  }
+  root.append(t);
+  let left = action ? 10000 : kind === 'error' ? 6000 : 3000;
+  let since = Date.now();
+  let timer = setTimeout(close, left);
+  const hold = () => { clearTimeout(timer); left -= Date.now() - since; };
+  const go = () => { if (t.matches(':hover, :focus-within')) return; since = Date.now(); timer = setTimeout(close, Math.max(left, 2000)); };
+  t.addEventListener('pointerenter', hold);
+  t.addEventListener('focusin', hold);
+  t.addEventListener('pointerleave', go);
+  t.addEventListener('focusout', () => setTimeout(go));
 }
 
 /** A modal dialog. build(close) returns its content; resolves with what close() was given. */

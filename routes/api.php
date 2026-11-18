@@ -60,6 +60,7 @@ Route::middleware('admin')->group(function () {
     Route::put('/releases/{id}', [ReleaseController::class, 'update']);
     Route::delete('/releases/{id}', [ReleaseController::class, 'destroy']);
     Route::post('/releases/{id}/status', [ReleaseController::class, 'status']);
+    Route::post('/releases/{id}/restore', [ReleaseController::class, 'restore']);
     Route::post('/releases/{id}/youtube', [YoutubeController::class, 'generate']);
     Route::put('/releases/{id}/youtube', [YoutubeController::class, 'save']);
 
