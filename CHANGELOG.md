@@ -8,6 +8,15 @@ Elke versie heeft een nummer major.minor.patch ([Semantic Versioning](https://se
 
 Het nummer staat in het bestand `VERSION`, onder in het accountmenu en op het inlogscherm. Elke versie krijgt een git-tag `vX.Y.Z`.
 
+## 2.4.0 (2026-11-18)
+Nieuw
+- Direct naar YouTube: koppel je kanaal één keer bij Instellingen → YouTube-kanaal (met de Client ID en het Client secret van je eigen Google Cloud-project; de README legt uit hoe). Daarna upload je in de YouTube-kit een release rechtstreeks naar je kanaal: privé, verborgen, openbaar of ingepland op een moment dat jij kiest. De titel, beschrijving en tags uit de kit gaan mee, in de categorie Muziek, "niet voor kinderen", en desgewenst met het AI-label van YouTube. Je cover wordt de thumbnail.
+- De upload gaat in stukjes, zodat hij ook op shared hosting niet wordt afgebroken, en gaat na een haperende verbinding verder waar YouTube was. Daarna staat de link bij de release; zodra de video openbaar is, springt de maan op vol. "Status vernieuwen" haalt op hoe hij er bij YouTube voor staat.
+- YouTube's regels worden vóór het uploaden gecontroleerd (titel max 100 tekens, beschrijving max 5.000 bytes, geen < of >, tags max 500 tekens), met duidelijke Nederlandse meldingen, ook als Google iets weigert (quotum op, te veel uploads, rechten).
+
+Beveiliging
+- Het Client secret en de blijvende toegang tot je kanaal staan versleuteld op de server en gaan nooit naar de browser. De app vraagt Google alleen om uploaden en meelezen, niet om video's te wijzigen of te verwijderen. Ontkoppelen trekt de toegang bij Google in.
+
 ## 2.3.0 (2026-11-18)
 Nieuw
 - Aanvullen: na het uploaden van meerdere releases loop je ze één voor één langs om style en lyrics te plakken, met een knop om te luisteren. De BPM en de YouTube-tekst gaan vanzelf mee. Je vindt het bij Te doen op de startpagina en na "Meerdere releases".
