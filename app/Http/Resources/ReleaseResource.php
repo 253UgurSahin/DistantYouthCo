@@ -53,6 +53,9 @@ class ReleaseResource extends JsonResource
                 'yt_description' => $this->yt_description,
                 'yt_tags' => $this->yt_tags,
                 'yt_generated_with' => $this->yt_generated_with,
+                'youtube_video_id' => $this->youtube_video_id,
+                'youtube_privacy' => $this->youtube_privacy,
+                'youtube_publish_at' => $this->youtube_publish_at,
             ];
         }
 

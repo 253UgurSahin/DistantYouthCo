@@ -18,9 +18,17 @@ class Setting extends Model
         'default_hashtags' => '#aimusic #sunoai #bassmusic #electronicmusic #distantyouthco',
         'default_video_type' => 'Official Visualizer',
         'anthropic_api_key' => '',
+        // Direct upload to YouTube
+        'youtube_client_id' => '',
+        'youtube_client_secret' => '',
+        'youtube_refresh_token' => '',
+        'youtube_channel_id' => '',
+        'youtube_channel_title' => '',
+        'youtube_default_privacy' => 'private',
+        'youtube_ai_label' => '1',
     ];
 
-    public const SECRETS = ['anthropic_api_key'];
+    public const SECRETS = ['anthropic_api_key', 'youtube_client_secret', 'youtube_refresh_token'];
 
     protected $primaryKey = 'key';
     public $incrementing = false;

@@ -7,6 +7,7 @@ import { youtubeIdOf } from './video.js';
 const fail = (e) => toast(e.message, 'error');
 const field = (id, label, input, hint) =>
   el('div', { class: 'field' }, el('label', { for: id }, label), input, hint ? el('div', { class: 'hint', id: `${id}-hint` }, hint) : null);
+export const PRIVACY_WORDS = { private: 'Privé', unlisted: 'Verborgen (alleen met de link)', public: 'Openbaar' };
 const VIDEO_TYPES = ['Official Visualizer', 'Official Lyric Video', 'Official Audio', 'Official Music Video'];
 
 // ---------- S04 New release / edit ----------
@@ -230,7 +231,8 @@ export async function editView(id) {
 
 export async function youtubeView(id, query) {
   if (!isAdmin()) throw Object.assign(new Error('Alleen voor admin'), { status: 403 });
-  const [{ release: r, limits }, settings] = await Promise.all([api(`/releases/${id}`), api('/settings')]);
+  const [{ release: r, limits }, settings, { youtube: yt }, upNow] = await Promise.all([api(`/releases/${id}`), api('/settings'), api('/youtube'), api(`/releases/${id}/youtube-upload`)]);
+  let lastUpload = upNow.upload;
   let mode = settings.claude.configured ? 'claude' : 'template';
 
   // A two-line field: a full YouTube title fits on a phone too; Enter does not add a line break.
@@ -382,6 +384,119 @@ export async function youtubeView(id, query) {
     ['Lyrics', r.lyrics ? `${parseLyrics(r.lyrics).reduce((n, s) => n + s.lines.length, 0)} regels` : 'leeg (instrumentaal)'],
   ];
 
+  // ---- Direct naar YouTube: the server sends the MP4 to the channel piece by piece; this page drives it. ----
+  function directPanel() {
+    const box = el('section', { class: 'panel stack direct-yt', 'aria-labelledby': 'direct-h', style: { gap: 'var(--space-4)' } },
+      el('h2', { id: 'direct-h', class: 'label' }, 'Direct naar YouTube'));
+    if (!yt.connected) {
+      box.append(el('p', { class: 'small muted', style: { margin: 0 } }, 'Koppel je kanaal één keer bij Instellingen. Daarna upload je de video met deze titel, beschrijving en tags rechtstreeks vanaf hier.'),
+        el('a', { class: 'btn subtle', href: '#/instellingen', style: { alignSelf: 'flex-start' } }, 'Kanaal koppelen'));
+      return box;
+    }
+    if (!r.has.video) {
+      box.append(el('p', { class: 'small muted', style: { margin: 0 } }, 'Deze release heeft nog geen MP4. ', el('a', { href: `#/release/${id}/bewerken` }, 'Video toevoegen')));
+      return box;
+    }
+    const privacy = el('select', { class: 'select', id: 'yt-privacy' },
+      [...Object.entries(PRIVACY_WORDS), ['scheduled', 'Ingepland (op een moment dat jij kiest)']].map(([v, label]) => el('option', { value: v, selected: v === (yt.default_privacy || 'private') }, label)));
+    const when = el('input', { class: 'input', id: 'yt-when', type: 'datetime-local' });
+    const whenField = field('yt-when', 'Live op (Nederlandse tijd)', when, 'Tot dat moment staat de video op privé.');
+    whenField.hidden = true;
+    privacy.addEventListener('change', () => { whenField.hidden = privacy.value !== 'scheduled'; });
+    const bar = el('div', { class: 'progress', hidden: true }, el('i'));
+    const line = el('p', { class: 'small', role: 'status', style: { margin: 0 } });
+    const result = el('div', { class: 'stack', style: { gap: '8px' } });
+    const go = el('button', { type: 'button', class: 'btn primary' }, icon('upload', 'sm'), el('span', {}, 'Upload naar YouTube'));
+    const mb = (n) => `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
+    const show = (u) => {
+      bar.hidden = !u || !['uploading', 'thumbnail'].includes(u.state);
+      if (u) bar.firstChild.style.width = `${Math.round(u.progress * 100)}%`;
+      line.textContent = !u ? '' : {
+        uploading: `Bezig met uploaden: ${Math.round(u.progress * 100)}% (${mb(u.sent)} van ${mb(u.size)})${u.error ? `. ${u.error}` : ''}`,
+        thumbnail: 'Video staat erop; nu de thumbnail…',
+        done: 'Geüpload naar YouTube.',
+        failed: u.error || 'De upload is mislukt.',
+      }[u.state];
+      line.className = `small ${u?.state === 'failed' ? 'error-text' : ''}`;
+      result.replaceChildren(...(u?.state === 'done' ? [
+        el('div', { class: 'row', style: { gap: '8px' } },
+          el('a', { class: 'btn subtle sm', href: u.url, target: '_blank', rel: 'noopener' }, icon('external-link', 'sm'), 'Bekijk op YouTube'),
+          el('a', { class: 'btn subtle sm', href: u.studio_url, target: '_blank', rel: 'noopener' }, 'YouTube Studio')),
+        ...u.warnings.map((w) => el('p', { class: 'xs muted', style: { margin: 0 } }, icon('circle-alert', 'xs'), ' ', w)),
+      ] : []));
+      go.lastChild.textContent = u && ['uploading', 'thumbnail'].includes(u.state) ? 'Verder uploaden' : r.youtube_video_id ? 'Nog een keer uploaden' : 'Upload naar YouTube';
+    };
+    let running = false;
+    const leave = (e) => { e.preventDefault(); e.returnValue = ''; };
+    const run = async () => {
+      running = true;
+      go.disabled = true;
+      window.addEventListener('beforeunload', leave);
+      let u = null;
+      let misses = 0;
+      try {
+        // One piece per request, until YouTube has all of it (stops when you leave this page; "Verder uploaden" picks it up).
+        while (box.isConnected) {
+          try {
+            ({ upload: u } = await api(`/releases/${id}/youtube-upload/step`, { method: 'POST' }));
+            misses = 0;
+          } catch (e) {
+            if (e.status && e.status !== 0 && e.status < 500) throw e;
+            if (++misses > 5) throw e;
+            line.textContent = `${e.message} Nog een poging…`;
+            await new Promise((res) => setTimeout(res, 2000 * misses));
+            continue;
+          }
+          show(u);
+          lastUpload = u; // what the button does next follows how far it got
+          if (!['uploading', 'thumbnail'].includes(u.state)) break;
+        }
+        if (u?.state === 'done') {
+          const fresh = (await api(`/releases/${id}`)).release;
+          Object.assign(r, fresh);
+          ytUrl.value = r.youtube_url || '';
+          drawSteps();
+          toast('Geüpload naar YouTube');
+        }
+      } catch (e) {
+        fail(e);
+      } finally {
+        running = false;
+        go.disabled = false;
+        window.removeEventListener('beforeunload', leave);
+      }
+    };
+    go.addEventListener('click', async () => {
+      if (running) return;
+      try {
+        if (lastUpload && ['uploading', 'thumbnail'].includes(lastUpload.state)) { await run(); return; }
+        if (r.youtube_video_id && !(await confirmDialog('Nog een keer uploaden?', 'Deze release staat al op YouTube. Er komt dan een tweede video op je kanaal; de eerste blijft staan.', 'Toch uploaden'))) return;
+        if (dirty) await saveTexts(); // the texts as they are on screen
+        if (privacy.value === 'scheduled' && !when.value) { when.focus(); throw new Error('Kies wanneer de video live moet gaan.'); }
+        const body = privacy.value === 'scheduled' ? { privacy: 'private', publish_at: when.value } : { privacy: privacy.value };
+        const { upload: u } = await api(`/releases/${id}/youtube-upload`, { method: 'POST', body });
+        lastUpload = u;
+        show(u);
+        await run();
+      } catch (e) { fail(e); }
+    });
+    const refresh = el('button', { type: 'button', class: 'btn ghost sm', onclick: async () => {
+      try {
+        const res = await api(`/releases/${id}/youtube-sync`, { method: 'POST' });
+        Object.assign(r, res.release);
+        ytUrl.value = r.youtube_url || '';
+        drawSteps();
+        toast(res.gone ? 'Deze video staat niet meer op YouTube. De link is weggehaald.' : `Status bijgewerkt: ${PRIVACY_WORDS[res.privacy] || res.privacy}`);
+      } catch (e) { fail(e); }
+    } }, icon('refresh-cw', 'sm'), 'Status vernieuwen');
+    box.append(
+      el('p', { class: 'small muted', style: { margin: 0 } }, `Naar ${yt.channel_title}, met de titel, beschrijving en tags hiernaast, in de categorie Muziek. Je cover wordt de thumbnail.`),
+      field('yt-privacy', 'Zichtbaarheid', privacy), whenField, go, bar, line, result,
+      r.youtube_video_id ? el('div', { class: 'row small' }, el('span', { class: 'muted' }, `${PRIVACY_WORDS[r.youtube_privacy] || 'Op'} YouTube`), el('span', { class: 'spacer' }), refresh) : null);
+    show(lastUpload);
+    return box;
+  }
+
   if (query.get('generate') === '1' && !r.yt_description) setTimeout(generate, 300);
 
   return el('div', { class: 'wrap page' },
@@ -406,8 +521,9 @@ export async function youtubeView(id, query) {
           el('label', { for: 'yt-tags', class: 'sr-only' }, 'Tags, met komma\'s'), tagsIn, gc.c),
         el('p', { class: 'xs muted', style: { margin: 0, textAlign: 'right' } }, 'Wijzigingen worden vanzelf bewaard. ', saved)),
       el('aside', { class: 'side-col' },
+        directPanel(),
         el('section', { class: 'panel lean-panel', 'aria-labelledby': 'steps-h' },
-          el('h2', { id: 'steps-h', class: 'label' }, 'Uploaden naar YouTube'),
+          el('h2', { id: 'steps-h', class: 'label' }, yt.connected ? 'Of zelf, via YouTube Studio' : 'Uploaden naar YouTube'),
           el('ol', { class: 'steps' },
             el('li', {}, step1, el('div', { class: 'grow' }, el('b', { class: 'small' }, 'Download de video'),
               r.has.video ? el('a', { class: 'btn subtle sm', href: `/media/${id}/video?download=1`, style: { alignSelf: 'flex-start' } }, icon('download', 'sm'), 'MP4 downloaden')
@@ -470,9 +586,13 @@ export async function accountsView() {
 
 // ---------- S09 Settings ----------
 
-export async function settingsView() {
+export async function settingsView(query = new URLSearchParams()) {
   if (!isAdmin()) throw Object.assign(new Error('Alleen voor admin'), { status: 403 });
-  const { settings: s, claude } = await api('/settings');
+  const [{ settings: s, claude, youtube_secret_saved: ytSecretSaved }, { youtube: yt }] = await Promise.all([api('/settings'), api('/youtube')]);
+  // Back from Google: say how it went, once.
+  if (query.get('youtube')) setTimeout(() => toast(`YouTube-kanaal gekoppeld: ${query.get('youtube')}`), 300);
+  if (query.get('youtube_error')) setTimeout(() => toast(query.get('youtube_error'), 'error'), 300);
+  if (query.get('youtube') || query.get('youtube_error')) history.replaceState(null, '', '#/instellingen');
   const inputs = {};
   const txt = (key, label, hint, type = 'text') => {
     inputs[key] = type === 'textarea'
@@ -485,15 +605,61 @@ export async function settingsView() {
     return field(`s-${key}`, label, inputs[key], hint);
   };
   const key = el('input', { class: 'input', id: 's-key', type: 'password', autocomplete: 'off', placeholder: claude.key_saved ? '•••••••• (opgeslagen)' : 'sk-ant-…' });
+  // YouTube-kanaal: the OAuth client of the artist's own Google project, and the connection.
+  const ytId = el('input', { class: 'input', id: 's-yt-id', autocomplete: 'off', spellcheck: 'false', value: s.youtube_client_id || '', placeholder: yt.from_env ? `${yt.client_id} (via de server)` : '…apps.googleusercontent.com' });
+  const ytSecret = el('input', { class: 'input', id: 's-yt-secret', type: 'password', autocomplete: 'off', placeholder: ytSecretSaved ? '•••••••• (opgeslagen)' : 'GOCSPX-…' });
+  const ytPrivacy = el('select', { class: 'select', id: 's-yt-privacy' }, Object.entries(PRIVACY_WORDS).map(([v, label]) => el('option', { value: v, selected: v === s.youtube_default_privacy }, label)));
+  const ytAi = el('input', { type: 'checkbox', id: 's-yt-ai', checked: s.youtube_ai_label === '1' });
+  const body = () => {
+    const b = {};
+    for (const [k, i] of Object.entries(inputs)) b[k] = i.value;
+    if (key.value.trim()) b.anthropic_api_key = key.value.trim();
+    b.youtube_client_id = ytId.value.trim();
+    if (ytSecret.value.trim()) b.youtube_client_secret = ytSecret.value.trim();
+    b.youtube_default_privacy = ytPrivacy.value;
+    b.youtube_ai_label = ytAi.checked;
+    return b;
+  };
   const save = async (e) => {
     e.preventDefault();
-    const body = {};
-    for (const [k, i] of Object.entries(inputs)) body[k] = i.value;
-    if (key.value.trim()) body.anthropic_api_key = key.value.trim();
-    await api('/settings', { method: 'PUT', body });
+    await api('/settings', { method: 'PUT', body: body() });
     toast('Instellingen opgeslagen');
     window.dispatchEvent(new CustomEvent('dyc:reload'));
   };
+  const connect = async () => {
+    await api('/settings', { method: 'PUT', body: body() }); // what was just typed counts
+    const { url } = await api('/youtube/connect', { method: 'POST' });
+    location.href = url; // Google's consent screen; it sends you back here
+  };
+  const disconnect = async () => {
+    if (!(await confirmDialog('YouTube ontkoppelen?', 'De app kan dan niet meer uploaden naar je kanaal. Video\'s die er al staan blijven staan.', 'Ontkoppelen'))) return;
+    await api('/youtube/connection', { method: 'DELETE' });
+    toast('YouTube ontkoppeld');
+    window.dispatchEvent(new CustomEvent('dyc:reload'));
+  };
+  const redirect = el('code', { class: 'redirect-uri' }, yt.redirect_uri);
+  const ytPanel = el('section', { class: 'panel stack', 'aria-labelledby': 'set-ytc', style: { gap: 'var(--space-4)' } },
+    el('h2', { id: 'set-ytc', class: 'label' }, 'YouTube-kanaal'),
+    el('p', { class: 'status claude-moon' }, moon(yt.connected ? 'live' : 'none', 'xl'), yt.connected ? `Gekoppeld: ${yt.channel_title}` : 'Nog niet gekoppeld: uploaden gaat dan via YouTube Studio'),
+    yt.connected ? null : el('ol', { class: 'small muted setup-steps' },
+      el('li', {}, 'Maak een project in ', el('a', { href: 'https://console.cloud.google.com/projectcreate', target: '_blank', rel: 'noopener' }, 'Google Cloud'), ' en zet de ', el('a', { href: 'https://console.cloud.google.com/apis/library/youtube.googleapis.com', target: '_blank', rel: 'noopener' }, 'YouTube Data API v3'), ' aan.'),
+      el('li', {}, 'Stel het ', el('a', { href: 'https://console.cloud.google.com/apis/credentials/consent', target: '_blank', rel: 'noopener' }, 'OAuth-toestemmingsscherm'), ' in (extern, jezelf als testgebruiker) en zet het op In productie.'),
+      el('li', {}, 'Maak bij ', el('a', { href: 'https://console.cloud.google.com/apis/credentials', target: '_blank', rel: 'noopener' }, 'Inloggegevens'), ' een OAuth-client-ID (Webapplicatie) met de omleidings-URI hieronder.'),
+      el('li', {}, 'Plak de Client ID en het secret hieronder en klik op Koppel.')),
+    el('div', { class: 'field' }, el('span', { class: 'small', style: { fontWeight: 600 } }, 'Omleidings-URI'),
+      el('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap' } }, redirect,
+        el('button', { type: 'button', class: 'icon-btn plain', 'aria-label': 'Omleidings-URI kopiëren', onclick: () => copyText(yt.redirect_uri, 'Omleidings-URI gekopieerd') }, icon('copy', 'sm'))),
+      el('div', { class: 'hint' }, 'Zet precies dit adres bij "Geautoriseerde omleidings-URI\'s" van je OAuth-client.')),
+    field('s-yt-id', 'Client ID', ytId),
+    field('s-yt-secret', 'Client secret', ytSecret, 'Wordt op de server bewaard en nooit meer getoond.'),
+    field('s-yt-privacy', 'Standaard zichtbaarheid bij uploaden', ytPrivacy),
+    el('label', { class: 'check', for: 's-yt-ai' }, ytAi, 'Meld bij YouTube dat de video AI-materiaal bevat'),
+    el('div', { class: 'row' },
+      yt.connected
+        ? el('button', { type: 'button', class: 'btn danger sm', onclick: () => disconnect().catch(fail) }, 'Ontkoppelen')
+        : el('button', { type: 'button', class: 'btn primary', onclick: () => connect().catch(fail) }, icon('external-link', 'sm'), 'Koppel YouTube-kanaal')),
+    el('p', { class: 'xs muted', style: { margin: 0 } }, 'Zolang Google je project niet heeft goedgekeurd, zet YouTube elke upload vast op privé. ',
+      el('a', { href: 'https://support.google.com/youtube/contact/yt_api_form', target: '_blank', rel: 'noopener' }, 'Goedkeuring (audit) aanvragen')));
   const clearKey = async () => {
     if (!(await confirmDialog('API key weghalen?', 'De YouTube-kit valt dan terug op het template, en albumnamen voorstellen werkt niet meer.', 'Weghalen'))) return;
     await api('/settings', { method: 'PUT', body: { clear_api_key: true } });
@@ -515,7 +681,8 @@ export async function settingsView() {
           el('h2', { id: 'set-claude', class: 'label' }, 'Claude'),
           el('p', { class: 'status claude-moon' }, moon(claude.configured ? 'live' : 'none', 'xl'), claude.configured ? (claude.from_env ? 'Ingesteld via de server (ANTHROPIC_API_KEY)' : 'Ingesteld') : 'Nog niet ingesteld: de YouTube-kit gebruikt dan het template'),
           field('s-key', 'Anthropic API key', key, 'Wordt op de server bewaard en nooit meer getoond. Maak er een op console.anthropic.com.'),
-          claude.key_saved ? el('button', { type: 'button', class: 'btn danger sm', style: { alignSelf: 'flex-start' }, onclick: () => clearKey().catch(fail) }, 'Key weghalen') : null)),
+          claude.key_saved ? el('button', { type: 'button', class: 'btn danger sm', style: { alignSelf: 'flex-start' }, onclick: () => clearKey().catch(fail) }, 'Key weghalen') : null),
+        ytPanel),
       // One Opslaan for both columns, after the Claude key too (on a phone it used to come before it).
       el('div', { class: 'form-actions form-end' }, el('button', { type: 'submit', class: 'btn primary lg' }, 'Opslaan'))));
 }

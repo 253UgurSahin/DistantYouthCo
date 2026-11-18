@@ -32,7 +32,7 @@ const ROUTES = [
   [/^\/playlist\/(\d+)$/, (m) => playlistView(m[1]), 'playlists'],
   [/^\/downloads$/, () => downloadsView(), 'downloads'],
   [/^\/accounts$/, () => accountsView(), 'account'],
-  [/^\/instellingen$/, () => settingsView(), 'account'],
+  [/^\/instellingen$/, (m, q) => settingsView(q), 'account'],
   [/^\/account$/, () => accountView(), 'account'],
 ];
 

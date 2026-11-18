@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\YoutubeController;
+use App\Http\Controllers\Api\YoutubeUploadController;
 use App\Http\Controllers\DownloadController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +64,15 @@ Route::middleware('admin')->group(function () {
     Route::post('/releases/{id}/restore', [ReleaseController::class, 'restore']);
     Route::post('/releases/{id}/youtube', [YoutubeController::class, 'generate']);
     Route::put('/releases/{id}/youtube', [YoutubeController::class, 'save']);
+
+    // Direct upload to YouTube
+    Route::get('/youtube', [YoutubeUploadController::class, 'status']);
+    Route::post('/youtube/connect', [YoutubeUploadController::class, 'connect']);
+    Route::delete('/youtube/connection', [YoutubeUploadController::class, 'disconnect']);
+    Route::get('/releases/{id}/youtube-upload', [YoutubeUploadController::class, 'show']);
+    Route::post('/releases/{id}/youtube-upload', [YoutubeUploadController::class, 'start']);
+    Route::post('/releases/{id}/youtube-upload/step', [YoutubeUploadController::class, 'step']);
+    Route::post('/releases/{id}/youtube-sync', [YoutubeUploadController::class, 'sync']);
 
     Route::get('/downloads', [DownloadController::class, 'index']);
 
