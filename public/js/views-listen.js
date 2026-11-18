@@ -60,14 +60,33 @@ export async function homeView(query) {
   let filter = query.get('status') || 'all';
   let term = query.get('q') || '';
   const grid = el('div', { class: 'grid' });
+  const list = el('ol', { class: 'tracks', 'aria-label': 'Releases als lijst' });
   const count = el('span', { class: 'small faint' });
+  // Covers or a compact list, and the order: remembered on this device.
+  const pref = (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
+  const keep = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private window */ } };
+  let view = pref('dyc-view', 'covers');
+  let order = pref('dyc-order', 'new');
+  const ORDERS = { new: 'Nieuwste eerst', old: 'Oudste eerst', az: 'Titel A–Z', long: 'Langste eerst' };
+  const sorted = (rs) => {
+    const out = [...rs]; // the server gives newest first
+    if (order === 'old') out.reverse();
+    if (order === 'az') out.sort((a, b) => a.title.localeCompare(b.title, 'nl', { sensitivity: 'base' }));
+    if (order === 'long') out.sort((a, b) => (b.duration || 0) - (a.duration || 0));
+    return out;
+  };
   const chipsEl = el('div', { class: 'chips', role: 'group', 'aria-label': 'Filter op status' });
   let stand = null;
   const draw = () => {
     const t = term.toLowerCase();
-    const shown = releases.filter((r) => (filter === 'all' || r.status === filter) &&
-      (!t || [r.title, r.style, r.lyrics].some((s) => (s || '').toLowerCase().includes(t))));
-    grid.replaceChildren(...(shown.length ? shown.map((r, i) => releaseCard(r, shown, i)) : [emptyState('Niets gevonden met dit filter.')]));
+    const shown = sorted(releases.filter((r) => (filter === 'all' || r.status === filter) &&
+      (!t || [r.title, r.style, r.lyrics].some((s) => (s || '').toLowerCase().includes(t)))));
+    const empty = () => [emptyState('Niets gevonden met dit filter.')];
+    grid.hidden = view !== 'covers';
+    list.hidden = view !== 'list';
+    if (view === 'list') list.replaceChildren(...(shown.length ? shown.map((r, i) => trackRow(r, shown, i)) : empty()));
+    else grid.replaceChildren(...(shown.length ? shown.map((r, i) => releaseCard(r, shown, i)) : empty()));
+    for (const b of viewSeg.children) b.setAttribute('aria-pressed', String(b.dataset.v === view));
     grid.classList.toggle('few', shown.length > 0 && shown.length <= 4);
     grid.style.setProperty('--n', String(Math.max(1, shown.length)));
     count.textContent = `${shown.length} van ${releases.length}`;
@@ -82,6 +101,12 @@ export async function homeView(query) {
   for (const [f, label] of [['all', 'Alles'], ['concept', 'Concept'], ['ready', 'Klaar voor YouTube'], ['live', 'Live']]) {
     chipsEl.append(el('button', { type: 'button', class: 'chip', dataset: { f }, onclick: () => setFilter(f) }, f === 'all' ? null : moon(f, 'sm'), label));
   }
+  const viewSeg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Weergave' },
+    [['covers', 'layout-grid', 'Covers'], ['list', 'rows-3', 'Lijst']].map(([v, ic, label]) =>
+      el('button', { type: 'button', dataset: { v }, 'aria-label': label, title: label, onclick: () => { view = v; keep('dyc-view', v); draw(); } }, icon(ic, 'sm'))));
+  const orderSel = el('select', { class: 'select sort-select', id: 'order', 'aria-label': 'Volgorde' },
+    Object.entries(ORDERS).map(([v, label]) => el('option', { value: v, selected: v === order }, label)));
+  orderSel.addEventListener('change', () => { order = orderSel.value; keep('dyc-order', order); draw(); });
   const search = el('input', { type: 'search', id: 'search', placeholder: 'Zoek op titel, stijl of lyrics', value: term, 'aria-label': 'Zoek in je muziek' });
   search.addEventListener('input', () => {
     term = search.value;
@@ -89,8 +114,8 @@ export async function homeView(query) {
   });
   body.append(el('section', { class: 'stack', 'aria-labelledby': 'rel-h', style: { gap: 'var(--space-6)' } },
     el('div', { class: 'section-head' }, el('h2', { id: 'rel-h' }, 'Releases'), count, el('span', { class: 'rule' })),
-    el('div', { class: 'toolbar' }, chipsEl, el('span', { class: 'spacer' }), el('label', { class: 'search' }, icon('search', 'sm'), search)),
-    grid));
+    el('div', { class: 'toolbar' }, chipsEl, el('span', { class: 'spacer' }), el('label', { class: 'search' }, icon('search', 'sm'), search), orderSel, viewSeg),
+    grid, list));
 
   // Collections.
   if (folders.length) {

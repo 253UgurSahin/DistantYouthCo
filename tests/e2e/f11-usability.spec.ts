@@ -47,5 +47,22 @@ test.describe('as listener', () => {
     await expect(pager.getByRole('link', { name: /^Vorige/ })).toHaveCount(0);
     await expectAccessible(page);
   });
+
+  test('U005 the releases as a compact list, in the order you choose, remembered', async ({ page }) => {
+    await page.goto('/');
+    const rel = page.getByRole('region', { name: 'Releases' });
+    await rel.getByRole('button', { name: 'Lijst' }).click();
+    const rows = page.getByRole('list', { name: 'Releases als lijst' }).getByRole('listitem');
+    await expect(rows.first()).toBeVisible();
+    await page.getByLabel('Volgorde').selectOption('az');
+    const titles = await rows.locator('.title').allTextContents();
+    expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b, 'nl', { sensitivity: 'base' })));
+    await page.reload();
+    await expect(page.getByRole('list', { name: 'Releases als lijst' })).toBeVisible();
+    await expect(page.getByLabel('Volgorde')).toHaveValue('az');
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'Covers' }).click();
+    await page.getByLabel('Volgorde').selectOption('new');
+  });
 });
 
