@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { AUTH, HAS_PASSWORDS, SEED, guard, expectAccessible, apiAs } from './helpers';
+import fs from 'node:fs';
+import { AUTH, HAS_PASSWORDS, SEED, ASSETS, guard, expectAccessible, apiAs } from './helpers';
 
 // Direct upload to YouTube, against tests/e2e/fake-google.php (the test instance's .env points the
 // Google addresses there; see forge-work/test-plan.md). Without it these tests are skipped.
@@ -29,19 +30,22 @@ test('F13-H1 connect the channel in Instellingen, upload a release from the kit,
   expect(settings).not.toContain(clientSecret);
   expect(settings).not.toContain('stand-in-'); // the tokens of the stand-in Google stay on the server
 
-  // The kit of a release with an MP4.
-  await page.goto(`/#/release/${SEED.lanterns}/youtube`);
+  // The kit of a new release with an MP4 (its first upload).
+  const made = await page.request.post('/api/releases', { headers: { 'X-Requested-With': 'dyc' }, multipart: {
+    title: `Naar YouTube ${Date.now()}`, style: 'melodic dubstep, 140 bpm',
+    wav: { name: 'a.wav', mimeType: 'audio/wav', buffer: fs.readFileSync(`${ASSETS}/lanterns.wav`).subarray(0, 200_000) },
+    video: { name: 'v.mp4', mimeType: 'video/mp4', buffer: fs.readFileSync(`${ASSETS}/visualizer.mp4`) },
+  } });
+  const rid = (await made.json()).release.id;
+  await page.goto(`/#/release/${rid}/youtube`);
   const direct = page.getByRole('region', { name: 'Direct naar YouTube' });
   await expect(direct).toContainText('Naar Fake Channel');
   await expectAccessible(page);
   await direct.getByLabel('Zichtbaarheid').selectOption('public');
-  const upload = direct.getByRole('button', { name: /^(Upload naar YouTube|Nog een keer uploaden)$/ });
-  const again = (await upload.textContent())?.includes('Nog een keer'); // an earlier run already put it on the stand-in channel
-  await upload.click();
-  if (again) await page.getByRole('dialog').getByRole('button', { name: 'Toch uploaden' }).click();
+  await direct.getByRole('button', { name: 'Upload naar YouTube' }).click();
   await expect(direct.getByRole('status')).toContainText('Geüpload naar YouTube.', { timeout: 60_000 });
   await expect(direct.getByRole('link', { name: 'Bekijk op YouTube' })).toHaveAttribute('href', /^https:\/\/youtu\.be\/FAKE/);
-  const r = (await (await apiAs(page, 'GET', `/releases/${SEED.lanterns}`)).json()).release;
+  const r = (await (await apiAs(page, 'GET', `/releases/${rid}`)).json()).release;
   expect([r.on_youtube, r.youtube_privacy, r.status]).toEqual([true, 'public', 'live']);
   expect(r.youtube_url).toMatch(/^https:\/\/youtu\.be\/FAKE/);
   await direct.getByRole('button', { name: 'Status vernieuwen' }).click();
@@ -52,12 +56,11 @@ test('F13-H1 connect the channel in Instellingen, upload a release from the kit,
   await expect(page.getByRole('dialog')).toContainText('tweede video');
   await page.getByRole('dialog').getByRole('button', { name: 'Annuleren' }).click();
 
-  // Leave the instance as it was: disconnected, and Lanterns not on YouTube (as the seed made it).
+  // Leave the instance as it was: disconnected.
   await page.goto('/#/instellingen');
   await panel.getByRole('button', { name: 'Ontkoppelen' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Ontkoppelen' }).click();
   await expect(panel).toContainText('Nog niet gekoppeld');
-  await apiAs(page, 'POST', `/releases/${SEED.lanterns}/status`, { youtube_url: '', on_youtube: false });
 });
 
 test('F13-N1 without a channel the kit says where to connect; a scheduled upload needs a moment', async ({ page }) => {

@@ -425,7 +425,10 @@ export async function youtubeView(id, query) {
         ...u.warnings.map((w) => el('p', { class: 'xs muted', style: { margin: 0 } }, icon('circle-alert', 'xs'), ' ', w)),
       ] : []));
       go.lastChild.textContent = u && ['uploading', 'thumbnail'].includes(u.state) ? 'Verder uploaden' : r.youtube_video_id ? 'Nog een keer uploaden' : 'Upload naar YouTube';
+      // Where it stands on YouTube, as soon as there is a video there (also right after the first upload).
+      onYt.replaceChildren(...(r.youtube_video_id ? [el('span', { class: 'muted' }, `${PRIVACY_WORDS[r.youtube_privacy] || 'Op'} YouTube`), el('span', { class: 'spacer' }), refresh] : []));
     };
+    const onYt = el('div', { class: 'row small' });
     let running = false;
     const leave = (e) => { e.preventDefault(); e.returnValue = ''; };
     const run = async () => {
@@ -456,6 +459,7 @@ export async function youtubeView(id, query) {
           Object.assign(r, fresh);
           ytUrl.value = r.youtube_url || '';
           drawSteps();
+          show(u);
           toast('Geüpload naar YouTube');
         }
       } catch (e) {
@@ -486,13 +490,13 @@ export async function youtubeView(id, query) {
         Object.assign(r, res.release);
         ytUrl.value = r.youtube_url || '';
         drawSteps();
+        show(lastUpload);
         toast(res.gone ? 'Deze video staat niet meer op YouTube. De link is weggehaald.' : `Status bijgewerkt: ${PRIVACY_WORDS[res.privacy] || res.privacy}`);
       } catch (e) { fail(e); }
     } }, icon('refresh-cw', 'sm'), 'Status vernieuwen');
     box.append(
       el('p', { class: 'small muted', style: { margin: 0 } }, `Naar ${yt.channel_title}, met de titel, beschrijving en tags hiernaast, in de categorie Muziek. Je cover wordt de thumbnail.`),
-      field('yt-privacy', 'Zichtbaarheid', privacy), whenField, go, bar, line, result,
-      r.youtube_video_id ? el('div', { class: 'row small' }, el('span', { class: 'muted' }, `${PRIVACY_WORDS[r.youtube_privacy] || 'Op'} YouTube`), el('span', { class: 'spacer' }), refresh) : null);
+      field('yt-privacy', 'Zichtbaarheid', privacy), whenField, go, bar, line, result, onYt);
     show(lastUpload);
     return box;
   }
